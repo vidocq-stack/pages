@@ -3,7 +3,7 @@ layout: default
 ---
 {@io.quarkiverse.roq.frontmatter.runtime.model.Site site}
 
-<header class="site-header">
+<header class="site-header" data-mobile-nav>
   <div class="site-header-inner">
     <a href="{site.url}" class="site-header-brand">
       {#if site.data.logo??}
@@ -11,7 +11,7 @@ layout: default
       {/if}
       <span class="site-header-name">{site.data.name ?: 'Vidocq'}</span>
     </a>
-    <nav class="site-nav" role="navigation">
+    <nav class="site-nav" id="site-nav" role="navigation" aria-label="Primary">
       {#for item in cdi:menu.items}
       <a href="{site.url(item.path)}" class="site-nav-link">
         <i class="{item.icon}"></i>
@@ -20,6 +20,9 @@ layout: default
       {/for}
     </nav>
     <div class="site-header-end">
+      <button class="site-nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav" data-mobile-nav-toggle>
+        <i class="fa-solid fa-bars" data-mobile-nav-icon></i>
+      </button>
       {#include partials/roq-default/sidebar-darkmode /}
     </div>
   </div>
@@ -41,3 +44,45 @@ layout: default
     </div>
   </div>
 </footer>
+
+<script>
+  (() => {
+    const header = document.querySelector('[data-mobile-nav]');
+    const toggle = document.querySelector('[data-mobile-nav-toggle]');
+    const icon = document.querySelector('[data-mobile-nav-icon]');
+    if (!header || !toggle) return;
+
+    const closeMenu = () => {
+      header.classList.remove('is-menu-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      if (icon) icon.className = 'fa-solid fa-bars';
+    };
+
+    const openMenu = () => {
+      header.classList.add('is-menu-open');
+      toggle.setAttribute('aria-expanded', 'true');
+      if (icon) icon.className = 'fa-solid fa-xmark';
+    };
+
+    toggle.addEventListener('click', () => {
+      if (header.classList.contains('is-menu-open')) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!header.contains(event.target)) {
+        closeMenu();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768) {
+        closeMenu();
+      }
+    });
+  })();
+</script>
+
