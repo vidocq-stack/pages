@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="utf-8">
+
+<!-- Prevent flash of unstyled content for dark mode -->
+<script>
+  const savedTheme = localStorage.getItem('darkMode');
+  const isDark = savedTheme !== null
+    ? savedTheme === 'true'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+  }
+</script>
+
+
+
+  <!-- SEO TITLE -->
+  
+  <title>Launching the Vidocq Site - Vidocq</title>
+  <meta property="og:title" content="Launching the Vidocq Site" />
+  <meta name="twitter:title" content="Launching the Vidocq Site">
+  <meta property="og:site_name" content="Vidocq">
+  <!-- SEO DESCRIPTION -->
+  <meta name="description" content="Opening a dedicated site for the Vidocq ecosystem — project presentation and engineering blog in one place.">
+  <meta property="og:description" content="Opening a dedicated site for the Vidocq ecosystem — project presentation and engineering blog in one place." />
+  <meta name="twitter:description" content="Opening a dedicated site for the Vidocq ecosystem — project presentation and engineering blog in one place.">
+  <!-- SEO AUTHOR -->
+  <meta property="article:author" content="vidocq-team" />
+  <meta name="author" content="vidocq-team" />
+  <!-- SEO URL -->
+  <link rel="canonical" href="https://vidocq.dev/posts/launching-the-vidocq-site/" />
+  <meta property="og:url" content="https://vidocq.dev/posts/launching-the-vidocq-site/" />
+  <meta name="twitter:url" content="https://vidocq.dev/posts/launching-the-vidocq-site/">
+
+  <!-- SEO TYPE -->
+  <meta property="og:type" content="article" />
+  <meta property="article:published_time" content="2026-06-05T00:00Z[Etc/UTC]" />
+
+  <!-- SEO IMAGE -->
+  <meta name="twitter:card" content="summary">
+  <!-- SEO COLLECTION PAGES -->
+  <link rel="next" href="https://vidocq.dev/posts/why-vidocq-is-built-as-independent-bricks/" />
+  <!-- SEO LOCALE -->
+  <meta property="og:locale" content="en" />
+  <!-- SEO GENERATOR -->
+  <meta name="generator" content="Quarkus Roq v2.1.3" />
+
+<!-- Favicon -->
+
+<base href="/posts/launching-the-vidocq-site/">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<meta name="theme-color" content="#0f172a">
+<meta name="msapplication-navbutton-color" content="#0f172a">
+<meta name="apple-mobile-web-app-status-bar-style" content="#0f172a">
+
+
+    <script type="module" src="/static/bundle/app-GY3US7BU.js"></script>
+      <link rel="stylesheet" href="/static/bundle/app-MRKEC7L4.css" />
+
+</head>
+<body >
+
+
+
+<div class="wrapper default">
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" class="site-header-brand">
+      <img src="/images/vidocq-logo.png" alt="Vidocq" class="site-header-logo-img"/>
+      <span class="site-header-name">Vidocq</span>
+    </a>
+    <nav class="site-nav" role="navigation">
+      <a href="/" class="site-nav-link">
+        <i class="fa-solid fa-house"></i>
+        <span>Home</span>
+      </a>
+      <a href="/projects/" class="site-nav-link">
+        <i class="fa-solid fa-cubes"></i>
+        <span>Projects</span>
+      </a>
+      <a href="/blog/" class="site-nav-link">
+        <i class="fa-regular fa-newspaper"></i>
+        <span>Blog</span>
+      </a>
+      <a href="/contributing/" class="site-nav-link">
+        <i class="fa-solid fa-code-pull-request"></i>
+        <span>Contributing</span>
+      </a>
+    </nav>
+    <div class="site-header-end">
+<!-- Dark Mode Toggle - Fixed top-right for all screen sizes -->
+<button class="dark-mode-toggle" aria-label="Toggle dark mode">
+  <i class="fas fa-moon"></i>
+</button>
+    </div>
+  </div>
+</header>
+
+<div class="vid-alpha-ribbon" aria-hidden="true"></div>
+
+<main class="main-content-wide">
+
+
+<div class="vid-article-hero">
+  <div class="vid-article-hero-inner">
+    <div class="vid-article-meta">
+      <a href="/blog/" class="vid-article-back"><i class="fa-solid fa-arrow-left"></i> Blog</a>
+      <span class="vid-article-meta-sep">·</span>
+      <span class="vid-article-meta-date">Jun 05, 2026</span>
+    </div>
+    <h1 class="vid-article-hero-title">Launching the Vidocq Site</h1>
+    <p class="vid-article-hero-desc">Opening a dedicated site for the Vidocq ecosystem — project presentation and engineering blog in one place.</p>
+    <div class="vid-article-hero-tags">
+      <span class="vid-article-tag-badge"># vidocq</span>
+      <span class="vid-article-tag-badge"># site</span>
+      <span class="vid-article-tag-badge"># updates</span>
+    </div>
+  </div>
+</div>
+
+<article class="article-page">
+  <div class="vid-article-content">
+    <section class="asciidoc-prose">
+<div class="imageblock blog-banner">
+<div class="content">
+<img src="/images/vidocq-banner.png" alt="Vidocq banner">
+</div>
+</div>
+<div class="paragraph">
+<p>The Vidocq site is now live.</p>
+</div>
+<div class="paragraph">
+<p>We wanted a publication flow that stays simple, transparent, and close to the code.
+Roq gives us exactly that: content written as plain AsciiDoc files, tracked in Git, published as a static site.</p>
+</div>
+<div class="paragraph">
+<p>The site has two roles.</p>
+</div>
+<div class="paragraph">
+<p>The <a href="/">home</a> and <a href="/projects/">projects</a> pages present the Vidocq ecosystem:
+what each sub-project does, how the layers compose, and what design constraints shape every decision.
+The <a href="/contributing/">contributing guide</a> covers prerequisites and workflow for anyone who wants to get involved.</p>
+</div>
+<div class="paragraph">
+<p>The <a href="/blog/">blog</a> is where we publish technical updates:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>release notes for the different Vidocq sub-projects,</p>
+</li>
+<li>
+<p>architecture and implementation notes,</p>
+</li>
+<li>
+<p>migration guides when breaking changes happen.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>If you build with Vidocq, this is the feed to watch.</p>
+</div>    </section>
+    <div class="vid-article-footer">
+      <div class="vid-article-footer-tags">
+        <a href="/posts/tag/vidocq" class="vid-article-tag-link"># vidocq</a>
+        <a href="/posts/tag/site" class="vid-article-tag-link"># site</a>
+        <a href="/posts/tag/updates" class="vid-article-tag-link"># updates</a>
+      </div>
+      <div class="vid-article-share">
+        <span class="vid-share-label">Share</span>
+        <a href="https://bsky.app/intent/compose?text=Launching the Vidocq Site%0Ahttps%3A%2F%2Fvidocq.dev%2Fposts%2Flaunching-the-vidocq-site%2F"
+           class="vid-share-btn" target="_blank" rel="noopener noreferrer">
+          <i class="fa-brands fa-bluesky"></i> Bluesky
+        </a>
+      </div>
+    </div>
+    <div class="vid-article-author">
+      <img src="/images/roq-default/default-avatar.svg" alt="Vidocq Team"/>
+      <div class="vid-article-author-info">
+        <a href="https://forge.vidocq.dev/vidocq" class="vid-article-author-name" target="_blank" rel="noopener noreferrer">Vidocq Team</a>
+        <span class="vid-article-author-job">Jakarta and MicroProfile Runtime Engineering</span>
+      </div>
+    </div>
+  </div>
+</article>
+
+
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <span class="site-footer-copy">© 2026 Vidocq Team — Jakarta EE &amp; MicroProfile runtime for Java 25</span>
+    <div class="site-footer-links">
+      <a href="https://bsky.app/profile/vidocq.dev" class="site-footer-link" target="_blank" rel="noopener noreferrer">
+        <i class="fa-brands fa-bluesky"></i> @vidocq.dev
+      </a>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="utf-8">
+
+<!-- Prevent flash of unstyled content for dark mode -->
+<script>
+  const savedTheme = localStorage.getItem('darkMode');
+  const isDark = savedTheme !== null
+    ? savedTheme === 'true'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+  }
+</script>
+
+
+
+  <!-- SEO TITLE -->
+  
+  <title>Contributing to Vidocq - Vidocq</title>
+  <meta property="og:title" content="Contributing to Vidocq" />
+  <meta name="twitter:title" content="Contributing to Vidocq">
+  <meta property="og:site_name" content="Vidocq">
+  <!-- SEO DESCRIPTION -->
+  <meta name="description" content="How to contribute to the Vidocq ecosystem — CLA, GPG signing, conventions, and workflow.">
+  <meta property="og:description" content="How to contribute to the Vidocq ecosystem — CLA, GPG signing, conventions, and workflow." />
+  <meta name="twitter:description" content="How to contribute to the Vidocq ecosystem — CLA, GPG signing, conventions, and workflow.">
+  <!-- SEO URL -->
+  <link rel="canonical" href="https://vidocq.dev/contributing/" />
+  <meta property="og:url" content="https://vidocq.dev/contributing/" />
+  <meta name="twitter:url" content="https://vidocq.dev/contributing/">
+
+  <!-- SEO TYPE -->
+  <meta property="og:type" content="website" />
+
+  <!-- SEO IMAGE -->
+  <meta name="twitter:card" content="summary">
+  <!-- SEO LOCALE -->
+  <meta property="og:locale" content="en" />
+  <!-- SEO GENERATOR -->
+  <meta name="generator" content="Quarkus Roq v2.1.3" />
+
+<!-- Favicon -->
+
+<base href="/contributing/">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<meta name="theme-color" content="#0f172a">
+<meta name="msapplication-navbutton-color" content="#0f172a">
+<meta name="apple-mobile-web-app-status-bar-style" content="#0f172a">
+
+
+    <script type="module" src="/static/bundle/app-GY3US7BU.js"></script>
+      <link rel="stylesheet" href="/static/bundle/app-MRKEC7L4.css" />
+
+</head>
+<body >
+
+
+
+<div class="wrapper default">
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" class="site-header-brand">
+      <img src="/images/vidocq-logo.png" alt="Vidocq" class="site-header-logo-img"/>
+      <span class="site-header-name">Vidocq</span>
+    </a>
+    <nav class="site-nav" role="navigation">
+      <a href="/" class="site-nav-link">
+        <i class="fa-solid fa-house"></i>
+        <span>Home</span>
+      </a>
+      <a href="/projects/" class="site-nav-link">
+        <i class="fa-solid fa-cubes"></i>
+        <span>Projects</span>
+      </a>
+      <a href="/blog/" class="site-nav-link">
+        <i class="fa-regular fa-newspaper"></i>
+        <span>Blog</span>
+      </a>
+      <a href="/contributing/" class="site-nav-link">
+        <i class="fa-solid fa-code-pull-request"></i>
+        <span>Contributing</span>
+      </a>
+    </nav>
+    <div class="site-header-end">
+<!-- Dark Mode Toggle - Fixed top-right for all screen sizes -->
+<button class="dark-mode-toggle" aria-label="Toggle dark mode">
+  <i class="fas fa-moon"></i>
+</button>
+    </div>
+  </div>
+</header>
+
+<div class="vid-alpha-ribbon" aria-hidden="true"></div>
+
+<main class="main-content-wide">
+
+
+<div class="vid-page-hero">
+  <div class="vid-page-hero-inner">
+    <h1 class="vid-page-hero-title">Contributing to Vidocq</h1>
+    <p class="vid-page-hero-desc">How to contribute to the Vidocq ecosystem — CLA, GPG signing, conventions, and workflow.</p>
+  </div>
+</div>
+
+<article class="page-content">
+  <section class="content-main">
+    <div class="asciidoc-prose vid-page-content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>Vidocq welcomes contributions at every layer of the stack: bug reports,
+TCK coverage improvements, new specification implementations,
+performance work, and documentation.</p>
+</div>
+<div class="paragraph">
+<p>The source code is hosted under the <a href="https://codeberg.org/Vidocq">Vidocq organisation on Codeberg</a>.
+Each specification implementation lives in its own repository.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_before_you_start">Before You Start</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Two things are required before any code contribution can be accepted.
+Both are non-negotiable: they protect you, other contributors, and the
+users of the project.</p>
+</div>
+<div class="sect2">
+<h3 id="_1_gpg_signed_commits">1. GPG-signed commits</h3>
+<div class="paragraph">
+<p>Every commit must be cryptographically signed with your GPG key.
+The CI workflow verifies this automatically on every pull request.</p>
+</div>
+<div class="paragraph">
+<p>If you are new to GPG:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://docs.codeberg.org/security/gpg-key/">Codeberg — Sign commits with GPG</a></p>
+</li>
+<li>
+<p><a href="https://www.gnupg.org/gph/en/manual.html">The GNU Privacy Guard handbook</a></p>
+</li>
+<li>
+<p><a href="https://gpgtools.org/">GPG Suite</a> (macOS) or <a href="https://www.openpgp.org/software/kleopatra/">Kleopatra</a> (Windows/Linux)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Generate a key, configure Git to sign all commits, and add your public key to your Codeberg account:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash"># Generate an ed25519 key
+gpg --batch --gen-key &lt;&lt;EOF
+Key-Type: ECDSA
+Key-Curve: ed25519
+Subkey-Type: ECDH
+Subkey-Curve: cv25519
+Name-Real: Your Full Name
+Name-Email: your@email.com
+Expire-Date: 2y
+%ask-passphrase
+EOF
+
+# Find your key ID, then configure git
+gpg --list-secret-keys --keyid-format=long your@email.com
+git config --global user.signingkey KEY_ID
+git config --global commit.gpgsign true
+git config --global tag.gpgsign true
+
+# Automatically append Signed-off-by to every commit
+git config --local format.signoff true</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Export your public key and add it under <strong>Settings → SSH/GPG Keys</strong> in your Codeberg profile:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">gpg --export --armor your@email.com</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_2_contributor_license_agreement_cla">2. Contributor License Agreement (CLA)</h3>
+<div class="paragraph">
+<p>Vidocq uses a Contributor License Agreement (CLA v1.0) combined with
+the Developer Certificate of Origin (DCO 1.1) on every commit.</p>
+</div>
+<div class="paragraph">
+<p>The CLA covers the project&#8217;s disjunctive triple licence:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>SPDX-License-Identifier: EPL-2.0 OR EUPL-1.2 OR GPL-2.0-or-later</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To sign the CLA, open a <strong>dedicated pull request</strong> (separate from your first code contribution)
+against the <a href="https://codeberg.org/Vidocq/governance">Vidocq governance repository</a>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Read <a href="https://codeberg.org/Vidocq/governance/src/branch/main/CLA.md">CLA.md</a> carefully.</p>
+</li>
+<li>
+<p>Add a row with your full name, Codeberg username, and today&#8217;s date
+to <code>CLA-signatures/individuals.md</code>.</p>
+</li>
+<li>
+<p>Add your exported GPG public key as <code>.forgejo/keys/&lt;your-username&gt;.asc</code>
+(this file enables automated signature verification on future pull requests).</p>
+</li>
+<li>
+<p>Include the following statement verbatim in the pull request description:</p>
+<div class="quoteblock">
+<blockquote>
+<div class="paragraph">
+<p>I have read and agree to the Vidocq Contributor License Agreement v1.0.</p>
+</div>
+</blockquote>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Corporate contributors: contact the maintainers before submitting anything.
+Once your CLA pull request is merged, your code contributions can be reviewed.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_development_setup">Development Setup</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>All sub-projects pin their toolchain via <code>.sdkmanrc</code>.
+Install <a href="https://sdkman.io">SDKMAN!</a>, then from any sub-project root:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">sdk env</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This installs and activates:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Java 25</strong> (Temurin) — required by all sub-projects.</p>
+</li>
+<li>
+<p><strong>Maven 3.9.16</strong> — pinned via <code>.sdkmanrc</code>; Maven 4 is not yet supported.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The workspace is a flat collection of independent Maven reactors — there is no root POM.
+Always <code>cd</code> into the sub-project you intend to work on:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">cd chappe
+./mvnw -ntp install -DskipTests   # full build
+./mvnw test                        # unit tests only</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_code_conventions">Code Conventions</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>These rules apply to every sub-project unless an explicit exception is documented
+in that sub-project&#8217;s <code>CLAUDE.md</code>.</p>
+</div>
+<div class="sect2">
+<h3 id="_jpms_strict_module_boundaries">JPMS — strict module boundaries</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Every module ships a <code>module-info.java</code>.</p>
+</li>
+<li>
+<p><code>exports</code> are minimal: only packages that form the public API.</p>
+</li>
+<li>
+<p><code>opens</code> require a documented reason (reflective access for CDI is the only accepted case).</p>
+</li>
+<li>
+<p>No classpath mode, no automatic modules, no split packages.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_zero_external_dependencies">Zero external dependencies</h3>
+<div class="paragraph">
+<p>Production scope may only contain Jakarta or MicroProfile specification artifacts.
+No ASM, Byte Buddy, reflection libraries, or general-purpose utilities.
+Any new runtime dependency requires explicit justification in the pull request.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_maximum_static_code_generation">Maximum static code generation</h3>
+<div class="paragraph">
+<p>Prefer the Class-File API (JEP 484) and APT annotation processors over runtime reflection.
+Metadata that can be produced at <code>compile</code> or <code>process-classes</code> time must not be computed at runtime.
+This keeps startup time flat and makes native compilation with GraalVM and Leyden CDS straightforward.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_virtual_threads_for_all_io">Virtual threads for all I/O</h3>
+<div class="paragraph">
+<p>Use <code>Executors.newVirtualThreadPerTaskExecutor()</code> for any I/O path.
+Platform thread pools are only acceptable with a documented reason.
+Avoid <code>synchronized</code> blocks around I/O; prefer <code>ReentrantLock</code> to prevent carrier-thread pinning.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_test_driven_development">Test-driven development</h3>
+<div class="paragraph">
+<p>Write the failing test before the implementation — red → green → refactor.
+For official specification tests, use the Jakarta TCK via Arquillian before writing custom tests.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_tck_runners">TCK runners</h3>
+<div class="paragraph">
+<p>TCK runners are intentionally excluded from their parent reactor because ShrinkWrap 3.3 is
+incompatible with Maven Model 4.1.0.
+Always run TCKs via the provided shell script from the sub-project root:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">cassini/run-official-tck-restful-4.0.sh
+foy/run-official-tck-servlet6.1.sh
+champollion/run-official-tck-jsonp-2.1.sh</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_submitting_a_contribution">Submitting a Contribution</h2>
+<div class="sectionbody">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Fork the relevant repository on <a href="https://codeberg.org/Vidocq">Codeberg</a>.</p>
+</li>
+<li>
+<p>Create a feature branch from <code>main</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">git checkout -b feat/your-feature-name</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Write the failing test first, then the implementation.</p>
+</li>
+<li>
+<p>Verify the full build: <code>./mvnw verify</code>.</p>
+</li>
+<li>
+<p>If your change touches a Jakarta TCK, run the relevant script and confirm no regression.</p>
+</li>
+<li>
+<p>Push and open a pull request against <code>main</code>.</p>
+</li>
+</ol>
+</div>
+<div class="sect2">
+<h3 id="_commit_message_format">Commit message format</h3>
+<div class="paragraph">
+<p>Vidocq uses <a href="https://www.conventionalcommits.org/">Conventional Commits</a>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>&lt;type&gt;(&lt;scope&gt;): &lt;short description&gt;
+
+[optional body]
+
+Signed-off-by: Your Name &lt;your@email.com&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Types:</strong> <code>feat</code>, <code>fix</code>, <code>docs</code>, <code>refactor</code>, <code>test</code>, <code>chore</code>, <code>perf</code></p>
+</div>
+<div class="paragraph">
+<p><strong>Scopes:</strong> module names — <code>chappe</code>, <code>vauban</code>, <code>champollion</code>, <code>ravel</code>, <code>cassini</code>, <code>foy</code>, &#8230;&#8203;</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>feat(chappe): add HTTP/2 push promise support
+
+Implements server push as defined in RFC 9113 § 8.4.
+Closes #42.
+
+Signed-off-by: Jane Doe &lt;jane.doe@example.com&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_bug_reports_and_performance_changes">Bug Reports and Performance Changes</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Any reproducible bug must be tracked in a <code>BUG.md</code> file at the root of the relevant sub-project:
+short id, date, symptom, minimal repro, root-cause hypothesis, and status.
+Include a <code>BUG.md</code> entry in your pull request if you are fixing a known bug.</p>
+</div>
+<div class="paragraph">
+<p>Any performance number must be recorded in a <code>BENCH.md</code> file at the sub-project root:
+date, hardware and JVM details, exact command, raw results, and delta versus the previous run.
+Never quote performance figures in commit messages or PR descriptions without a <code>BENCH.md</code> entry.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_language">Language</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Commit messages, Javadoc, and all <code>.md</code> and <code>.adoc</code> files must be written in <strong>English</strong>.</p>
+</div>
+</div>
+</div>    </div>
+  </section>
+</article>
+
+
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <span class="site-footer-copy">© 2026 Vidocq Team — Jakarta EE &amp; MicroProfile runtime for Java 25</span>
+    <div class="site-footer-links">
+      <a href="https://bsky.app/profile/vidocq.dev" class="site-footer-link" target="_blank" rel="noopener noreferrer">
+        <i class="fa-brands fa-bluesky"></i> @vidocq.dev
+      </a>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+</body>
+</html>
