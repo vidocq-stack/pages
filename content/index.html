@@ -14,16 +14,20 @@ theme-color: "#0f172a"
   <img src="/images/vidocq-banner-wide.png" alt="Vidocq MicroProfile" class="vid-banner-img"/>
   <div class="vid-hero-strip">
     <div class="vid-hero-inner">
-      <p class="vid-tagline">Jakarta EE · MicroProfile · Java 25</p>
+      <p class="vid-tagline">Jakarta EE · MicroProfile · Java 25 · 100% European</p>
       <h1 class="vid-title"><span class="shimmer">Vidocq</span></h1>
       <p class="vid-subtitle">
-        Zero external dependencies — zero inherited CVEs, full technological sovereignty.
+        A <strong>100% sovereign European stack</strong> — zero external dependencies,
+        zero inherited CVEs, full technological independence.
         Strict JPMS module isolation closes the door on reflection attacks and classpath pollution,
         making Vidocq the first Java framework that is <strong>jlink-</strong> and <strong>jpackage-ready</strong> out of the box.
       </p>
       <div class="vid-actions">
         <a href="/projects/" class="btn btn-primary">
           <i class="fa-solid fa-cubes"></i> Explore projects
+        </a>
+        <a href="https://codeberg.org/Vidocq" class="btn vid-btn-ghost" target="_blank" rel="noopener noreferrer">
+          <i class="fa-brands fa-git-alt"></i> Source on Codeberg
         </a>
         <a href="/contributing/" class="btn vid-btn-ghost">
           <i class="fa-solid fa-code-pull-request"></i> Get involved
@@ -74,8 +78,35 @@ theme-color: "#0f172a"
   </div>
 </section>
 
-<!-- ── Architecture ──────────────────────────────────────────── -->
+<!-- ── Innovations ───────────────────────────────────────────── -->
 <div class="vid-alt-band">
+  <section class="roq-section vid-section">
+    <h2>Innovations</h2>
+    <p class="roq-section-lead">
+      Beyond the core constraints, Vidocq ships capabilities you will not find in any other Java runtime.
+    </p>
+    <div class="roq-features vid-features">
+      <div class="card card-highlighted roq-feature vid-card">
+        <div class="roq-feature-icon"><i class="fa-solid fa-lock"></i></div>
+        <h3>Secured JARs (<code>.sjar</code>)</h3>
+        <p>JPMS archives encrypted with <strong>AES-256</strong>. The exposed surface — public API and SPI packages — stays in the clear so consumers compile and link normally; everything else is ciphered at rest, protecting your intellectual property and shrinking the attack surface.</p>
+      </div>
+      <div class="card roq-feature vid-card">
+        <div class="roq-feature-icon"><i class="fa-solid fa-puzzle-piece"></i></div>
+        <h3>JAR enrichment plugins</h3>
+        <p>Vauban and Vidocq plugins can <strong>enrich external JARs</strong> — adding CDI metadata, indexes, and generated glue to third-party libraries that were never built for the ecosystem, without touching their source.</p>
+      </div>
+      <div class="card card-highlighted roq-feature vid-card">
+        <div class="roq-feature-icon"><i class="fa-solid fa-arrows-rotate"></i></div>
+        <h3>Hot reload</h3>
+        <p>A first-class <strong>hot-reload</strong> mode reflects code and configuration changes live, keeping the inner development loop tight without restarting the runtime.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ── Architecture ──────────────────────────────────────────── -->
+<div>
   <section class="roq-section vid-section">
     <h2>Architecture</h2>
     <p class="roq-section-lead">Four layers. No circular dependencies.</p>
@@ -97,7 +128,7 @@ theme-color: "#0f172a"
         <div class="vid-arch-row-label">Persistence</div>
         <div class="vid-arch-row-items">
           <span class="vid-arch-pill">mansart</span>
-          <span class="vid-arch-desc">Jakarta Data 1.0 · Transactions 2.0 · JDBC pool</span>
+          <span class="vid-arch-desc">Jakarta Data 1.0 · Transactions 2.0 · JDBC pool · H2 / PostgreSQL</span>
         </div>
       </div>
       <div class="vid-arch-row vid-arch-microprofile">
@@ -122,9 +153,9 @@ theme-color: "#0f172a"
       <div class="vid-arch-row vid-arch-foundation">
         <div class="vid-arch-row-label">Foundation</div>
         <div class="vid-arch-row-items">
-          <span class="vid-arch-pill">chappe <span class="vid-arch-pill-sub">HTTP</span></span>
+          <span class="vid-arch-pill">chappe <span class="vid-arch-pill-sub">HTTP/1.1 · H2 · WS · gRPC</span></span>
           <span class="vid-arch-pill">vauban <span class="vid-arch-pill-sub">CDI 4.1</span></span>
-          <span class="vid-arch-pill">champollion <span class="vid-arch-pill-sub">JSON</span></span>
+          <span class="vid-arch-pill">champollion <span class="vid-arch-pill-sub">JSON · Protobuf</span></span>
           <span class="vid-arch-pill">ravel <span class="vid-arch-pill-sub">Config</span></span>
         </div>
       </div>
@@ -134,6 +165,55 @@ theme-color: "#0f172a"
       <a href="/projects/" class="btn btn-primary">
         Browse all fifteen projects <i class="fa-solid fa-arrow-right"></i>
       </a>
+    </div>
+  </section>
+</div>
+
+<!-- ── Team ──────────────────────────────────────────────────── -->
+<div class="vid-alt-band">
+  <section class="roq-section vid-section">
+    <h2>The people behind Vidocq</h2>
+    <p class="roq-section-lead">
+      Vidocq was initiated by two long-time members of the Java, Jakarta EE and MicroProfile communities.
+    </p>
+    <div class="vid-team-grid">
+      <div class="vid-team-card">
+        <img class="vid-team-avatar" src="https://codeberg.org/yblazart.png" alt="Yann Blazart" loading="lazy"/>
+        <div class="vid-team-body">
+          <h3 class="vid-team-name">Yann Blazart</h3>
+          <p class="vid-team-role">Creator &amp; lead · Senior Tech Lead @ SCIAM</p>
+          <p class="vid-team-bio">
+            In the Java world since the early 2000s and a long-standing advocate of Jakarta EE, MicroProfile and CDI.
+            Co-creator of LangChain4j-CDI. Senior Tech Lead at SCIAM since 2019, with past contributions
+            to TomEE, JAX-WS (Metro) and WicketExtJS.
+          </p>
+          <div class="vid-team-links">
+            <a href="https://codeberg.org/yblazart" target="_blank" rel="noopener noreferrer" aria-label="Codeberg"><i class="fa-solid fa-code-branch"></i></a>
+            <a href="https://github.com/yblazart" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+            <a href="https://www.linkedin.com/in/yblazart/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="https://bsky.app/profile/yblazart.bsky.social" target="_blank" rel="noopener noreferrer" aria-label="Bluesky"><i class="fa-brands fa-bluesky"></i></a>
+            <a href="https://twitter.com/yblazart" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
+          </div>
+        </div>
+      </div>
+      <div class="vid-team-card">
+        <img class="vid-team-avatar" src="https://github.com/antoinesd.png" alt="Antoine Sabot-Durand" loading="lazy"/>
+        <div class="vid-team-body">
+          <h3 class="vid-team-name">Antoine Sabot-Durand</h3>
+          <p class="vid-team-role">Co-initiator · Java Champion · Consultant @ SCIAM</p>
+          <p class="vid-team-bio">
+            Java Champion and former CDI specification lead. Member of the Quarkus launch team at Red Hat
+            and contributor to MicroProfile (Fault Tolerance, Health) and Jakarta EE.
+          </p>
+          <div class="vid-team-links">
+            <a href="https://github.com/antoinesd" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+            <a href="https://www.linkedin.com/in/antoinesabotdurand/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="https://bsky.app/profile/antoinesd.bsky.social" target="_blank" rel="noopener noreferrer" aria-label="Bluesky"><i class="fa-brands fa-bluesky"></i></a>
+            <a href="https://twitter.com/antoine_sd" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
+            <a href="https://www.next-presso.com" target="_blank" rel="noopener noreferrer" aria-label="Website"><i class="fa-solid fa-globe"></i></a>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </div>

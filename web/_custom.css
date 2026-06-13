@@ -534,6 +534,105 @@
   color: var(--color-accent-300);
 }
 
+/* ─── Team cards ─────────────────────────────────────────────── */
+
+.vid-team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.vid-team-card {
+  display: flex;
+  gap: 1.25rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  padding: 1.75rem;
+  box-shadow: 0 2px 12px rgba(12,20,69,0.07);
+}
+
+.dark .vid-team-card {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: none;
+}
+
+.vid-team-avatar {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--color-accent-100);
+}
+
+.dark .vid-team-avatar {
+  border-color: rgba(255,255,255,0.1);
+}
+
+.vid-team-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.vid-team-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
+}
+
+.dark .vid-team-name { color: #f3f4f6; }
+
+.vid-team-role {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-accent-600);
+  margin: 0;
+}
+
+.dark .vid-team-role { color: var(--color-accent-300); }
+
+.vid-team-bio {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #4b5563 !important;
+  margin: 0.25rem 0 0.5rem !important;
+}
+
+.dark .vid-team-bio { color: #9ca3af !important; }
+
+.vid-team-links {
+  display: flex;
+  gap: 0.85rem;
+  margin-top: auto;
+}
+
+.vid-team-links a {
+  color: #6b7280;
+  font-size: 1.1rem;
+  transition: color 0.15s, transform 0.15s;
+}
+
+.vid-team-links a:hover {
+  color: var(--color-accent-600);
+  transform: translateY(-2px);
+}
+
+.dark .vid-team-links a { color: #9ca3af; }
+.dark .vid-team-links a:hover { color: var(--color-accent-300); }
+
+.vid-team-links .fa-bluesky:hover { color: #0085ff; }
+
+@media (max-width: 768px) {
+  .vid-team-grid { grid-template-columns: 1fr; }
+  .vid-team-card { flex-direction: column; text-align: center; align-items: center; }
+  .vid-team-links { justify-content: center; }
+}
+
 /* ─── Blog post list ─────────────────────────────────────────── */
 
 .vid-post-list {

@@ -21,8 +21,13 @@ They are the stable base everything else builds on.
 
 === `chappe` — HTTP Server
 
-Pure Java 25 HTTP/1.1, HTTP/2, and HTTP/3 server transport layer.
+Pure Java 25 HTTP/1.1 and HTTP/2 transport layer, with first-class **WebSocket** (RFC 6455)
+and **gRPC** transport (core framing over HTTP/2). HTTP/3 is on the roadmap, pending the JDK QUIC stack.
 Handles connections, request parsing, and response serialisation with no third-party I/O framework.
+
+Sustains **100k req/s with a p99 below 3 ms** on the project's reference harness — a deliberate
+ceiling of the pure one-virtual-thread-per-connection model, matching Jetty-level latency at a
+fraction of the idle memory footprint.
 
 === `vauban` — CDI Container
 
@@ -30,10 +35,12 @@ CDI 4.1 Lite container, fully JPMS-native.
 Uses the Class-File API and APT processors to generate bean metadata at compile time —
 no runtime scanning, no reflection.
 
-=== `champollion` — JSON Processing
+=== `champollion` — JSON & Protobuf Processing
 
 Jakarta JSON-P 2.1 and JSON-B 3.0 implementation.
 Produces JSON-B adapters and serialisers statically at build time.
+Also provides **Protocol Buffers** support, generating message codecs at compile time —
+the serialisation backend for `chappe`'s gRPC transport, with no external protobuf runtime.
 
 === `ravel` — Configuration
 
@@ -43,6 +50,11 @@ Sources: environment variables, system properties, and `META-INF/microprofile-co
 == Jakarta EE Layer
 
 === `foy` — Jakarta Servlet 6.1
+
+[NOTE]
+====
+*Development in progress.* The Servlet layer is actively being built out and is not yet feature-complete.
+====
 
 Servlet container bridging `chappe` for transport and `vauban` for CDI integration.
 
@@ -91,7 +103,13 @@ MicroProfile Health: liveness and readiness probes at `/health/live` and `/healt
 === `mansart` — Jakarta Data 1.0 + Transactions 2.0 + JDBC
 
 Repository pattern and transaction management with a built-in JDBC connection pool.
+Two database dialects are supported out of the box: **H2** and **PostgreSQL**.
 Jakarta Persistence 3.2 support is planned for a future milestone.
+
+The H2 integration also showcases Vidocq's JAR-enrichment capability: a dedicated **H2 extension**
+repackages the upstream H2 driver as a proper **JPMS module** — adding a `module-info` and clean
+exports to a library that ships only as a classpath JAR — so it fits the strict module graph
+without `--add-opens` or automatic-module fallbacks.
 
 == Orchestrator
 
@@ -110,9 +128,9 @@ skinparam nodesep 40
 skinparam ranksep 50
 
 package "Foundation" {
-  [chappe]      <<HTTP/1.1 · H2 · H3>>   #dbeafe
+  [chappe]      <<HTTP/1.1 · H2 · WS · gRPC>> #dbeafe
   [vauban]      <<CDI 4.1 Lite>>          #dbeafe
-  [champollion] <<JSON-P 2.1 · JSON-B 3.0>> #dbeafe
+  [champollion] <<JSON-P · JSON-B · Protobuf>> #dbeafe
   [ravel]       <<Config 3.1>>            #dbeafe
 }
 
