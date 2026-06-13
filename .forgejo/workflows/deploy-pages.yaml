@@ -14,31 +14,23 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    # Run every step inside the Maven + Java 21 container.
-    # git is not pre-installed in the official maven image, so the first step adds it.
-    container:
-      image: docker.io/library/maven:3.9-eclipse-temurin-21
-
     steps:
-      - name: Install git
-        run: apt-get update -qq && apt-get install -y --no-install-recommends git
-
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Cache Maven local repository
-        uses: actions/cache@v3
+      - name: Set up Java 21 (Temurin)
+        uses: actions/setup-java@v4
         with:
-          path: /root/.m2/repository
-          key: maven-${{ hashFiles('pom.xml') }}
-          restore-keys: maven-
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
 
-      - name: Build Quarkus app
-        run: mvn package -ntp -DskipTests
+      - name: Build Quarkus app (batch generator baked in)
+        run: ./mvnw package -ntp -DskipTests -Dquarkus.roq.generator.batch=true
 
       - name: Generate static site
-        # Starts the app in batch mode: crawls all routes, writes HTML to target/roq/, then exits.
-        run: java -Dquarkus.roq.generator.batch=true -jar target/quarkus-app/quarkus-run.jar
+        # quarkus.roq.generator.batch is a build-time property fixed above; just run the jar.
+        run: java -jar target/quarkus-app/quarkus-run.jar
 
       - name: Push to Vidocq/pages repository (pages branch)
         env:
