@@ -1,0 +1,80 @@
+---
+layout: main
+asciidoc-attributes:
+  notitle@: ""
+---
+{@io.quarkiverse.roq.frontmatter.runtime.model.DocumentPage page}
+
+{#insert before-article /}
+
+<div class="vid-article-hero">
+  <div class="vid-article-hero-inner">
+    <div class="vid-article-meta">
+      <a href="/blog/" class="vid-article-back"><i class="fa-solid fa-arrow-left"></i> Blog</a>
+      <span class="vid-article-meta-sep">·</span>
+      <span class="vid-article-meta-date">{page.date.format('MMM dd, yyyy')}</span>
+    </div>
+    <h1 class="vid-article-hero-title">{page.title}</h1>
+    {#if page.description}
+    <p class="vid-article-hero-desc">{page.description}</p>
+    {/if}
+    {#if page.data.tags??}
+    <div class="vid-article-hero-tags">
+      {#for tag in page.data.tags.asStrings}
+      <span class="vid-article-tag-badge"># {tag}</span>
+      {/for}
+    </div>
+    {/if}
+  </div>
+</div>
+
+<article class="article-page">
+  {#insert article-start /}
+  <div class="vid-article-content">
+    {#if page.image}
+    <div class="vid-article-banner">
+      <img src="{page.image}" alt="{page.title}">
+    </div>
+    {/if}
+    <section class="{page.source.markup is 'asciidoc' ? 'asciidoc-prose' : 'content-prose'}">
+      {#insert /}
+    </section>
+    <div class="vid-article-footer">
+      <div class="vid-article-footer-tags">
+        {#if page.data.tags??}
+        {#for tag in page.data.tags.asStrings}
+        {#let tagSlug = tag.slugify}
+        <a href="{site.url('/posts/tag', tagSlug)}" class="vid-article-tag-link"># {tagSlug}</a>
+        {/for}
+        {/if}
+      </div>
+      <div class="vid-article-share">
+        <span class="vid-share-label">Share</span>
+        <a href="https://bsky.app/intent/compose?text={page.title}%0A{page.url.encoded}"
+           class="vid-share-btn" target="_blank" rel="noopener noreferrer">
+          <i class="fa-brands fa-bluesky"></i> Bluesky
+        </a>
+      </div>
+    </div>
+    {#if page.data.author??}
+    {#let author=cdi:authors.get(page.data.author)}
+    {#if author}
+    <div class="vid-article-author">
+      {#if author.avatar??}
+      <img src="{site.image(author.avatar)}" alt="{author.name}"/>
+      {#else}
+      <img src="{site.image('roq-default/default-avatar.svg')}" alt="{author.name}"/>
+      {/if}
+      <div class="vid-article-author-info">
+        <a href="{author.profile}" class="vid-article-author-name" target="_blank" rel="noopener noreferrer">{author.name}</a>
+        <span class="vid-article-author-job">{author.job}</span>
+      </div>
+    </div>
+    {/if}
+    {/let}
+    {/if}
+  </div>
+  {#insert article-end /}
+</article>
+
+{#insert after-article /}

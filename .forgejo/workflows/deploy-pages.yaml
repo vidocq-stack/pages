@@ -1,0 +1,64 @@
+name: Deploy to Codeberg Pages
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    # Run every step inside the Maven + Java 21 container.
+    # git is not pre-installed in the official maven image, so the first step adds it.
+    container:
+      image: docker.io/library/maven:3.9-eclipse-temurin-21
+
+    steps:
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y --no-install-recommends git
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Cache Maven local repository
+        uses: actions/cache@v3
+        with:
+          path: /root/.m2/repository
+          key: maven-${{ hashFiles('pom.xml') }}
+          restore-keys: maven-
+
+      - name: Build Quarkus app
+        run: mvn package -ntp -DskipTests
+
+      - name: Generate static site
+        # Starts the app in batch mode: crawls all routes, writes HTML to target/roq/, then exits.
+        run: java -Dquarkus.roq.generator.batch=true -jar target/quarkus-app/quarkus-run.jar
+
+      - name: Push to Vidocq/pages repository (pages branch)
+        env:
+          CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
+        run: |
+          set -e
+          git config --global user.email "ci@vidocq.dev"
+          git config --global user.name "Vidocq CI"
+
+          REPO="https://oauth2:${CODEBERG_TOKEN}@codeberg.org/Vidocq/pages.git"
+
+          # Clone the pages branch if it exists; create an orphan branch on first run.
+          if git clone --branch pages --depth 1 "$REPO" /tmp/pages 2>/dev/null; then
+            find /tmp/pages -mindepth 1 ! -path "/tmp/pages/.git*" -delete
+          else
+            git clone --depth 1 "$REPO" /tmp/pages
+            git -C /tmp/pages checkout --orphan pages
+            git -C /tmp/pages rm -rf .
+          fi
+
+          cp -r target/roq/. /tmp/pages/
+
+          # Codeberg Pages: custom domain declaration
+          printf 'vidocq.dev\nwww.vidocq.dev\n' > /tmp/pages/.domains
+
+          git -C /tmp/pages add -A
+          git -C /tmp/pages diff --cached --quiet \
+            || git -C /tmp/pages commit -m "ci: deploy $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+          git -C /tmp/pages push origin pages --force

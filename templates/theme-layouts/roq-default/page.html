@@ -1,0 +1,28 @@
+---
+layout: main
+show-header-date: false
+asciidoc-attributes:
+  notitle@: ""
+---
+{@io.quarkiverse.roq.frontmatter.runtime.model.DocumentPage page}
+
+{#insert before-page/}
+
+<div class="vid-page-hero">
+  <div class="vid-page-hero-inner">
+    <h1 class="vid-page-hero-title">{page.title}</h1>
+    {#if page.description}
+    <p class="vid-page-hero-desc">{page.description}</p>
+    {/if}
+  </div>
+</div>
+
+<article class="page-content{#if page.data.page-class??} {page.data.page-class}{/if}">
+  <section class="content-main">
+    <div class="{page.source.markup is 'asciidoc' ? 'asciidoc-prose' : 'content-prose'} vid-page-content">
+      {#insert /}
+    </div>
+  </section>
+</article>
+
+{#insert after-page/}

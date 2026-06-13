@@ -1,0 +1,43 @@
+---
+layout: default
+---
+{@io.quarkiverse.roq.frontmatter.runtime.model.Site site}
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="{site.url}" class="site-header-brand">
+      {#if site.data.logo??}
+      <img src="{site.image(site.data.logo)}" alt="{site.data.name ?: 'Vidocq'}" class="site-header-logo-img"/>
+      {/if}
+      <span class="site-header-name">{site.data.name ?: 'Vidocq'}</span>
+    </a>
+    <nav class="site-nav" role="navigation">
+      {#for item in cdi:menu.items}
+      <a href="{site.url(item.path)}" class="site-nav-link">
+        <i class="{item.icon}"></i>
+        <span>{item.title}</span>
+      </a>
+      {/for}
+    </nav>
+    <div class="site-header-end">
+      {#include partials/roq-default/sidebar-darkmode /}
+    </div>
+  </div>
+</header>
+
+<div class="vid-alpha-ribbon" aria-hidden="true"></div>
+
+<main class="main-content-wide">
+  {#insert /}
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <span class="site-footer-copy">© 2026 Vidocq Team — Jakarta EE &amp; MicroProfile runtime for Java 25</span>
+    <div class="site-footer-links">
+      <a href="https://bsky.app/profile/vidocq.dev" class="site-footer-link" target="_blank" rel="noopener noreferrer">
+        <i class="fa-brands fa-bluesky"></i> @vidocq.dev
+      </a>
+    </div>
+  </div>
+</footer>

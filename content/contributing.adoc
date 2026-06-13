@@ -1,0 +1,222 @@
+---
+title: Contributing
+description: How to contribute to the Vidocq ecosystem — CLA, GPG signing, conventions, and workflow.
+layout: page
+link: /contributing/
+---
+
+= Contributing to Vidocq
+
+Vidocq welcomes contributions at every layer of the stack: bug reports,
+TCK coverage improvements, new specification implementations,
+performance work, and documentation.
+
+The source code is hosted under the https://codeberg.org/Vidocq[Vidocq organisation on Codeberg].
+Each specification implementation lives in its own repository.
+
+== Before You Start
+
+Two things are required before any code contribution can be accepted.
+Both are non-negotiable: they protect you, other contributors, and the
+users of the project.
+
+=== 1. GPG-signed commits
+
+Every commit must be cryptographically signed with your GPG key.
+The CI workflow verifies this automatically on every pull request.
+
+If you are new to GPG:
+
+* https://docs.codeberg.org/security/gpg-key/[Codeberg — Sign commits with GPG]
+* https://www.gnupg.org/gph/en/manual.html[The GNU Privacy Guard handbook]
+* https://gpgtools.org/[GPG Suite] (macOS) or https://www.openpgp.org/software/kleopatra/[Kleopatra] (Windows/Linux)
+
+Generate a key, configure Git to sign all commits, and add your public key to your Codeberg account:
+
+[source,bash]
+----
+# Generate an ed25519 key
+gpg --batch --gen-key <<EOF
+Key-Type: ECDSA
+Key-Curve: ed25519
+Subkey-Type: ECDH
+Subkey-Curve: cv25519
+Name-Real: Your Full Name
+Name-Email: your@email.com
+Expire-Date: 2y
+%ask-passphrase
+EOF
+
+# Find your key ID, then configure git
+gpg --list-secret-keys --keyid-format=long your@email.com
+git config --global user.signingkey KEY_ID
+git config --global commit.gpgsign true
+git config --global tag.gpgsign true
+
+# Automatically append Signed-off-by to every commit
+git config --local format.signoff true
+----
+
+Export your public key and add it under *Settings → SSH/GPG Keys* in your Codeberg profile:
+
+[source,bash]
+----
+gpg --export --armor your@email.com
+----
+
+=== 2. Contributor License Agreement (CLA)
+
+Vidocq uses a Contributor License Agreement (CLA v1.0) combined with
+the Developer Certificate of Origin (DCO 1.1) on every commit.
+
+The CLA covers the project's disjunctive triple licence:
+
+[source]
+----
+SPDX-License-Identifier: EPL-2.0 OR EUPL-1.2 OR GPL-2.0-or-later
+----
+
+To sign the CLA, open a *dedicated pull request* (separate from your first code contribution)
+against the https://codeberg.org/Vidocq/governance[Vidocq governance repository]:
+
+. Read https://codeberg.org/Vidocq/governance/src/branch/main/CLA.md[CLA.md] carefully.
+. Add a row with your full name, Codeberg username, and today's date
+  to `CLA-signatures/individuals.md`.
+. Add your exported GPG public key as `.forgejo/keys/<your-username>.asc`
+  (this file enables automated signature verification on future pull requests).
+. Include the following statement verbatim in the pull request description:
++
+____
+I have read and agree to the Vidocq Contributor License Agreement v1.0.
+____
+
+Corporate contributors: contact the maintainers before submitting anything.
+Once your CLA pull request is merged, your code contributions can be reviewed.
+
+== Development Setup
+
+All sub-projects pin their toolchain via `.sdkmanrc`.
+Install https://sdkman.io[SDKMAN!], then from any sub-project root:
+
+[source,bash]
+----
+sdk env
+----
+
+This installs and activates:
+
+* *Java 25* (Temurin) — required by all sub-projects.
+* *Maven 3.9.16* — pinned via `.sdkmanrc`; Maven 4 is not yet supported.
+
+The workspace is a flat collection of independent Maven reactors — there is no root POM.
+Always `cd` into the sub-project you intend to work on:
+
+[source,bash]
+----
+cd chappe
+./mvnw -ntp install -DskipTests   # full build
+./mvnw test                        # unit tests only
+----
+
+== Code Conventions
+
+These rules apply to every sub-project unless an explicit exception is documented
+in that sub-project's `CLAUDE.md`.
+
+=== JPMS — strict module boundaries
+
+* Every module ships a `module-info.java`.
+* `exports` are minimal: only packages that form the public API.
+* `opens` require a documented reason (reflective access for CDI is the only accepted case).
+* No classpath mode, no automatic modules, no split packages.
+
+=== Zero external dependencies
+
+Production scope may only contain Jakarta or MicroProfile specification artifacts.
+No ASM, Byte Buddy, reflection libraries, or general-purpose utilities.
+Any new runtime dependency requires explicit justification in the pull request.
+
+=== Maximum static code generation
+
+Prefer the Class-File API (JEP 484) and APT annotation processors over runtime reflection.
+Metadata that can be produced at `compile` or `process-classes` time must not be computed at runtime.
+This keeps startup time flat and makes native compilation with GraalVM and Leyden CDS straightforward.
+
+=== Virtual threads for all I/O
+
+Use `Executors.newVirtualThreadPerTaskExecutor()` for any I/O path.
+Platform thread pools are only acceptable with a documented reason.
+Avoid `synchronized` blocks around I/O; prefer `ReentrantLock` to prevent carrier-thread pinning.
+
+=== Test-driven development
+
+Write the failing test before the implementation — red → green → refactor.
+For official specification tests, use the Jakarta TCK via Arquillian before writing custom tests.
+
+=== TCK runners
+
+TCK runners are intentionally excluded from their parent reactor because ShrinkWrap 3.3 is
+incompatible with Maven Model 4.1.0.
+Always run TCKs via the provided shell script from the sub-project root:
+
+[source,bash]
+----
+cassini/run-official-tck-restful-4.0.sh
+foy/run-official-tck-servlet6.1.sh
+champollion/run-official-tck-jsonp-2.1.sh
+----
+
+== Submitting a Contribution
+
+. Fork the relevant repository on https://codeberg.org/Vidocq[Codeberg].
+. Create a feature branch from `main`:
++
+[source,bash]
+----
+git checkout -b feat/your-feature-name
+----
+. Write the failing test first, then the implementation.
+. Verify the full build: `./mvnw verify`.
+. If your change touches a Jakarta TCK, run the relevant script and confirm no regression.
+. Push and open a pull request against `main`.
+
+=== Commit message format
+
+Vidocq uses https://www.conventionalcommits.org/[Conventional Commits]:
+
+[source]
+----
+<type>(<scope>): <short description>
+
+[optional body]
+
+Signed-off-by: Your Name <your@email.com>
+----
+
+*Types:* `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`
+
+*Scopes:* module names — `chappe`, `vauban`, `champollion`, `ravel`, `cassini`, `foy`, ...
+
+[source]
+----
+feat(chappe): add HTTP/2 push promise support
+
+Implements server push as defined in RFC 9113 § 8.4.
+Closes #42.
+
+Signed-off-by: Jane Doe <jane.doe@example.com>
+----
+
+== Bug Reports and Performance Changes
+
+Any reproducible bug must be tracked in a `BUG.md` file at the root of the relevant sub-project:
+short id, date, symptom, minimal repro, root-cause hypothesis, and status.
+Include a `BUG.md` entry in your pull request if you are fixing a known bug.
+
+Any performance number must be recorded in a `BENCH.md` file at the sub-project root:
+date, hardware and JVM details, exact command, raw results, and delta versus the previous run.
+Never quote performance figures in commit messages or PR descriptions without a `BENCH.md` entry.
+
+== Language
+
+Commit messages, Javadoc, and all `.md` and `.adoc` files must be written in *English*.

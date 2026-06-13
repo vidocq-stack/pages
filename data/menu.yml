@@ -1,0 +1,13 @@
+items:
+  - title: Home
+    path: /
+    icon: fa-solid fa-house
+  - title: Projects
+    path: /projects/
+    icon: fa-solid fa-cubes
+  - title: Blog
+    path: /blog/
+    icon: fa-regular fa-newspaper
+  - title: Contributing
+    path: /contributing/
+    icon: fa-solid fa-code-pull-request

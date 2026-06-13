@@ -1,0 +1,160 @@
+---
+title: Projects
+description: All fifteen Vidocq sub-projects, their scope, and how they fit together.
+layout: page
+link: /projects/
+---
+
+= Vidocq Projects
+
+Vidocq is a workspace of fifteen independent Maven projects.
+Each one implements exactly one Jakarta or MicroProfile specification — or one foundational concern — and
+publishes its own artifact to Maven Central on its own schedule.
+
+The dependency graph is strictly layered: foundational bricks have no dependency on each other;
+Jakarta layers compose bricks; MicroProfile layers sit on top.
+
+== Foundational Bricks
+
+These four modules have zero inter-dependencies and carry no external runtime libraries.
+They are the stable base everything else builds on.
+
+=== `chappe` — HTTP Server
+
+Pure Java 25 HTTP/1.1, HTTP/2, and HTTP/3 server transport layer.
+Handles connections, request parsing, and response serialisation with no third-party I/O framework.
+
+=== `vauban` — CDI Container
+
+CDI 4.1 Lite container, fully JPMS-native.
+Uses the Class-File API and APT processors to generate bean metadata at compile time —
+no runtime scanning, no reflection.
+
+=== `champollion` — JSON Processing
+
+Jakarta JSON-P 2.1 and JSON-B 3.0 implementation.
+Produces JSON-B adapters and serialisers statically at build time.
+
+=== `ravel` — Configuration
+
+MicroProfile Config 3.1 implementation.
+Sources: environment variables, system properties, and `META-INF/microprofile-config.properties`.
+
+== Jakarta EE Layer
+
+=== `foy` — Jakarta Servlet 6.1
+
+Servlet container bridging `chappe` for transport and `vauban` for CDI integration.
+
+=== `cassini` — Jakarta REST 4.0
+
+JAX-RS implementation.
+Resource scanning and provider registration are handled at compile time via APT, keeping
+startup time flat regardless of application size.
+
+== MicroProfile Layer
+
+=== `heisenberg` — Fault Tolerance 4.1
+
+`@Retry`, `@CircuitBreaker`, `@Bulkhead`, `@Timeout`, and `@Fallback` over virtual threads.
+No thread-pool per policy; each interceptor submits to the shared virtual-thread executor.
+
+=== `cervantes` — JWT 2.1
+
+MicroProfile JWT: bearer token verification and `JsonWebToken` injection.
+Uses `champollion` for JSON parsing; no third-party JWT library.
+
+=== `cyrano` — Rest Client 4.0
+
+Typed REST client generated at compile time from `@RegisterRestClient` interfaces.
+Built on `cassini` and `chappe`; no dynamic proxies at runtime.
+
+=== `dirac` — Metrics 5.1.1
+
+MicroProfile Metrics: counters, gauges, timers, and histograms exposed over a `/metrics` endpoint.
+
+=== `grimm` — OpenAPI 4.1
+
+MicroProfile OpenAPI: generates the OpenAPI document from JAX-RS resources during the build
+via APT, then serves it statically at runtime.
+
+=== `humboldt` — Telemetry 2.1
+
+MicroProfile Telemetry: distributed tracing, metrics, and logs through the OpenTelemetry SDK.
+
+=== `knock` — Health 4.0
+
+MicroProfile Health: liveness and readiness probes at `/health/live` and `/health/ready`.
+
+== Persistence and Transactions
+
+=== `mansart` — Jakarta Data 1.0 + Transactions 2.0 + JDBC
+
+Repository pattern and transaction management with a built-in JDBC connection pool.
+Jakarta Persistence 3.2 support is planned for a future milestone.
+
+== Orchestrator
+
+=== `vidocq` — Vidocq-MPS
+
+Runtime orchestrator and extension SPI.
+Inspired by the Quarkus extension model: extensions declare their dependencies, contribute
+configuration, and wire the other bricks together at startup.
+
+== Dependency Graph
+
+[plantuml, config="plantuml-skin.iuml", format=svg, opts=inline]
+....
+@startuml
+skinparam nodesep 40
+skinparam ranksep 50
+
+package "Foundation" {
+  [chappe]      <<HTTP/1.1 · H2 · H3>>   #dbeafe
+  [vauban]      <<CDI 4.1 Lite>>          #dbeafe
+  [champollion] <<JSON-P 2.1 · JSON-B 3.0>> #dbeafe
+  [ravel]       <<Config 3.1>>            #dbeafe
+}
+
+package "Jakarta EE" {
+  [foy]     <<Servlet 6.1>>  #eff6ff
+  [cassini] <<REST 4.0>>     #eff6ff
+}
+
+package "MicroProfile" {
+  [heisenberg] <<Fault Tolerance 4.1>> #f0f4ff
+  [cervantes]  <<JWT 2.1>>             #f0f4ff
+  [cyrano]     <<Rest Client 4.0>>     #f0f4ff
+  [dirac]      <<Metrics 5.1>>         #f0f4ff
+  [grimm]      <<OpenAPI 4.1>>         #f0f4ff
+  [humboldt]   <<Telemetry 2.1>>       #f0f4ff
+  [knock]      <<Health 4.0>>          #f0f4ff
+}
+
+package "Persistence" {
+  [mansart] <<Data 1.0 · Tx 2.0>> #fefce8
+}
+
+package "Orchestrator" {
+  [vidocq] <<Vidocq-MPS>> #fef9c3
+}
+
+[chappe]      --> [foy]
+[vauban]      --> [foy]
+[chappe]      --> [cassini]
+[vauban]      --> [cassini]
+[champollion] --> [cassini]
+[cassini]     --> [heisenberg]
+[cassini]     --> [cyrano]
+[cassini]     --> [grimm]
+[vauban]      --> [cervantes]
+[champollion] --> [cervantes]
+[vauban]      --> [dirac]
+[vauban]      --> [humboldt]
+[vauban]      --> [knock]
+[mansart]     --> [vidocq]
+[cassini]     --> [vidocq]
+[heisenberg]  --> [vidocq]
+@enduml
+....
+.Dependency graph — arrows show compile-time dependencies

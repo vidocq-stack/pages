@@ -1,0 +1,19 @@
+<article class="vid-post-card">
+  {#if post.image}
+  <a class="vid-post-card-img-link" href="{post.url}">
+    <img src="{post.image}" alt="{post.title}" class="vid-post-card-img"/>
+  </a>
+  {/if}
+  <div class="vid-post-card-body">
+    <div class="vid-post-card-meta">
+      <span class="vid-post-card-date">{post.date.format('MMM dd, yyyy')}</span>
+      <span class="vid-post-card-sep">·</span>
+      <span class="vid-post-card-read">{post.readTime} min read</span>
+    </div>
+    <h2 class="vid-post-card-title"><a href="{post.url}">{post.title}</a></h2>
+    <p class="vid-post-card-desc">{post.description ?: post.contentAbstract}</p>
+    <a href="{post.url}" class="vid-post-card-link">
+      Read more <i class="fa-solid fa-arrow-right"></i>
+    </a>
+  </div>
+</article>

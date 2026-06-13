@@ -1,0 +1,172 @@
+---
+title: Vidocq
+description: A modular Jakarta EE and MicroProfile runtime for Java 25 — JPMS-native, virtual-thread-first, zero external dependencies.
+layout: home
+link: /
+name: Vidocq
+simple-name: Vidocq
+logo: vidocq-logo.png
+theme-color: "#0f172a"
+---
+
+<!-- ── Hero ─────────────────────────────────────────────────── -->
+<div class="vid-hero-band">
+  <img src="/images/vidocq-banner-wide.png" alt="Vidocq MicroProfile" class="vid-banner-img"/>
+  <div class="vid-hero-strip">
+    <div class="vid-hero-inner">
+      <p class="vid-tagline">Jakarta EE · MicroProfile · Java 25</p>
+      <h1 class="vid-title"><span class="shimmer">Vidocq</span></h1>
+      <p class="vid-subtitle">
+        Zero external dependencies — zero inherited CVEs.
+        Strict JPMS module isolation closes the door on reflection attacks and classpath pollution,
+        making Vidocq the first Java framework that is <strong>jlink-</strong> and <strong>jpackage-ready</strong> out of the box.
+      </p>
+      <div class="vid-actions">
+        <a href="/projects/" class="btn btn-primary">
+          <i class="fa-solid fa-cubes"></i> Explore projects
+        </a>
+        <a href="/contributing/" class="btn vid-btn-ghost">
+          <i class="fa-solid fa-code-pull-request"></i> Get involved
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Five constraints ──────────────────────────────────────── -->
+<section class="roq-section vid-section">
+  <h2>Six constraints. One runtime.</h2>
+  <p class="roq-section-lead">
+    Every design decision in the Vidocq ecosystem flows from the same set of rules,
+    applied consistently across all fifteen projects.
+  </p>
+  <div class="roq-features vid-features">
+    <div class="card card-highlighted roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-layer-group"></i></div>
+      <h3>JPMS-native</h3>
+      <p>Every module ships a <code>module-info.java</code>. Minimal exports, no unjustified <code>opens</code>, no classpath fallback, no split packages.</p>
+    </div>
+    <div class="card roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-bolt"></i></div>
+      <h3>Virtual threads throughout</h3>
+      <p>All I/O paths run on virtual threads. No platform thread pool without a documented reason.</p>
+    </div>
+    <div class="card card-highlighted roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+      <h3>Static code generation</h3>
+      <p>The Class-File API (JEP 484) and APT produce all metadata at compile time. No reflection, no dynamic proxies, no startup scanning.</p>
+    </div>
+    <div class="card roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-feather"></i></div>
+      <h3>Zero runtime deps</h3>
+      <p>Production scope: only the Jakarta or MicroProfile spec artifact. No ASM, no Byte Buddy, no utility libraries.</p>
+    </div>
+    <div class="card card-highlighted roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-cubes"></i></div>
+      <h3>Independent bricks</h3>
+      <p>Fifteen self-contained projects, each with its own release cycle. Consume only the layers you need.</p>
+    </div>
+    <div class="card roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <h3>AOT-ready</h3>
+      <p>GraalVM native and Leyden CDS work out of the box — no reflection config, no dynamic proxies to register.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Architecture ──────────────────────────────────────────── -->
+<div class="vid-alt-band">
+  <section class="roq-section vid-section">
+    <h2>Architecture</h2>
+    <p class="roq-section-lead">Four layers. No circular dependencies.</p>
+    <p>
+      The dependency graph is strictly layered. Foundational bricks carry no inter-dependency.
+      Jakarta layers compose them. MicroProfile implementations sit on top.
+      The orchestrator wires everything through an extension SPI.
+    </p>
+
+    <div class="vid-arch-stack">
+      <div class="vid-arch-row vid-arch-orchestrator">
+        <div class="vid-arch-row-label">Orchestrator</div>
+        <div class="vid-arch-row-items">
+          <span class="vid-arch-pill">vidocq</span>
+          <span class="vid-arch-desc">Extension SPI · packaging · runtime wiring</span>
+        </div>
+      </div>
+      <div class="vid-arch-row vid-arch-persistence">
+        <div class="vid-arch-row-label">Persistence</div>
+        <div class="vid-arch-row-items">
+          <span class="vid-arch-pill">mansart</span>
+          <span class="vid-arch-desc">Jakarta Data 1.0 · Transactions 2.0 · JDBC pool</span>
+        </div>
+      </div>
+      <div class="vid-arch-row vid-arch-microprofile">
+        <div class="vid-arch-row-label">MicroProfile</div>
+        <div class="vid-arch-row-items">
+          <span class="vid-arch-pill">heisenberg <span class="vid-arch-pill-sub">Fault Tolerance 4.1</span></span>
+          <span class="vid-arch-pill">cervantes <span class="vid-arch-pill-sub">JWT 2.1</span></span>
+          <span class="vid-arch-pill">cyrano <span class="vid-arch-pill-sub">Rest Client 4.0</span></span>
+          <span class="vid-arch-pill">dirac <span class="vid-arch-pill-sub">Metrics 5.1</span></span>
+          <span class="vid-arch-pill">grimm <span class="vid-arch-pill-sub">OpenAPI 4.1</span></span>
+          <span class="vid-arch-pill">humboldt <span class="vid-arch-pill-sub">Telemetry 2.1</span></span>
+          <span class="vid-arch-pill">knock <span class="vid-arch-pill-sub">Health 4.0</span></span>
+        </div>
+      </div>
+      <div class="vid-arch-row vid-arch-jakarta">
+        <div class="vid-arch-row-label">Jakarta EE</div>
+        <div class="vid-arch-row-items">
+          <span class="vid-arch-pill">foy <span class="vid-arch-pill-sub">Servlet 6.1</span></span>
+          <span class="vid-arch-pill">cassini <span class="vid-arch-pill-sub">REST 4.0</span></span>
+        </div>
+      </div>
+      <div class="vid-arch-row vid-arch-foundation">
+        <div class="vid-arch-row-label">Foundation</div>
+        <div class="vid-arch-row-items">
+          <span class="vid-arch-pill">chappe <span class="vid-arch-pill-sub">HTTP</span></span>
+          <span class="vid-arch-pill">vauban <span class="vid-arch-pill-sub">CDI 4.1</span></span>
+          <span class="vid-arch-pill">champollion <span class="vid-arch-pill-sub">JSON</span></span>
+          <span class="vid-arch-pill">ravel <span class="vid-arch-pill-sub">Config</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="vid-arch-cta">
+      <a href="/projects/" class="btn btn-primary">
+        Browse all fifteen projects <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+  </section>
+</div>
+
+<!-- ── Blog + Contributing ───────────────────────────────────── -->
+<section class="roq-section vid-section">
+  <div class="vid-two-col vid-bottom-row">
+    <div class="vid-two-col-text vid-bottom-card">
+      <div class="vid-bottom-card-icon"><i class="fa-regular fa-newspaper"></i></div>
+      <h2>From the blog</h2>
+      <p>Engineering notes, release updates, and implementation deep-dives from the Vidocq ecosystem.</p>
+      <ul class="vid-post-list">
+        <li>
+          <a href="/posts/launching-the-vidocq-blog/">Launching the Vidocq Site</a>
+          <span>Why we chose Roq and what to expect here.</span>
+        </li>
+        <li>
+          <a href="/posts/why-vidocq-is-built-as-independent-bricks/">Why Vidocq is built as independent bricks</a>
+          <span>The rationale behind fifteen separate release trains.</span>
+        </li>
+      </ul>
+      <a href="/blog/" class="btn btn-primary vid-bottom-btn">
+        All posts <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+    <div class="vid-two-col-text vid-bottom-card">
+      <div class="vid-bottom-card-icon"><i class="fa-solid fa-code-pull-request"></i></div>
+      <h2>Get involved</h2>
+      <p>Contributions are welcome at every layer — from TCK coverage to implementing a new MicroProfile specification.</p>
+      <p>The contributing guide covers prerequisites (Java 25, Maven 4, SDKMAN), JPMS conventions, the zero-deps rule, virtual-thread patterns, and the PR workflow.</p>
+      <a href="/contributing/" class="btn btn-primary vid-bottom-btn">
+        <i class="fa-solid fa-code-pull-request"></i> Contributing guide
+      </a>
+    </div>
+  </div>
+</section>

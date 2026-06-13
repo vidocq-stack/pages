@@ -1,0 +1,6 @@
+---
+title: Blog
+description: All Vidocq engineering posts.
+layout: blog
+link: /blog/
+---
