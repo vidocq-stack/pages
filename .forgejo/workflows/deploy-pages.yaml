@@ -3,6 +3,12 @@ name: Deploy to Codeberg Pages
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual deploy (optional)"
+        required: false
+        default: "manual"
 
 jobs:
   deploy:
@@ -59,6 +65,8 @@ jobs:
           printf 'vidocq.dev\nwww.vidocq.dev\n' > /tmp/pages/.domains
 
           git -C /tmp/pages add -A
-          git -C /tmp/pages diff --cached --quiet \
-            || git -C /tmp/pages commit -m "ci: deploy $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+          TRIGGER="${{ github.event_name }}"
+          NOTE="${{ github.event.inputs.reason }}"
+          MSG="ci: deploy $(date -u +%Y-%m-%dT%H:%M:%SZ) [${TRIGGER}${NOTE:+ — $NOTE}] [skip ci]"
+          git -C /tmp/pages diff --cached --quiet || git -C /tmp/pages commit -m "$MSG"
           git -C /tmp/pages push origin pages --force
