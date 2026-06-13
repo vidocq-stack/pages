@@ -1,4 +1,4 @@
-name: Deploy to Codeberg Pages
+name: Deploy to Cloudflare Pages
 
 on:
   push:
@@ -25,6 +25,11 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Build Quarkus app (batch generator baked in)
         run: ./mvnw package -ntp -DskipTests -Dquarkus.roq.generator.batch=true
 
@@ -32,33 +37,15 @@ jobs:
         # quarkus.roq.generator.batch is a build-time property fixed above; just run the jar.
         run: java -jar target/quarkus-app/quarkus-run.jar
 
-      - name: Push to Vidocq/pages repository (pages branch)
+      - name: Deploy to Cloudflare Pages
         env:
-          CODEBERG_TOKEN: ${{ secrets.VIDOCQ_BOT_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
-          set -e
-          git config --global user.email "ci@vidocq.dev"
-          git config --global user.name "Vidocq CI"
-
-          REPO="https://oauth2:${CODEBERG_TOKEN}@codeberg.org/Vidocq/pages.git"
-
-          # Clone the pages branch if it exists; create an orphan branch on first run.
-          if git clone --branch pages --depth 1 "$REPO" /tmp/pages 2>/dev/null; then
-            find /tmp/pages -mindepth 1 ! -path "/tmp/pages/.git*" -delete
-          else
-            git clone --depth 1 "$REPO" /tmp/pages
-            git -C /tmp/pages checkout --orphan pages
-            git -C /tmp/pages rm -rf .
-          fi
-
-          cp -r target/roq/. /tmp/pages/
-
-          # Codeberg Pages: custom domain declaration
-          printf 'vidocq.dev\nwww.vidocq.dev\n' > /tmp/pages/.domains
-
-          git -C /tmp/pages add -A
           TRIGGER="${{ github.event_name }}"
           NOTE="${{ github.event.inputs.reason }}"
-          MSG="ci: deploy $(date -u +%Y-%m-%dT%H:%M:%SZ) [${TRIGGER}${NOTE:+ — $NOTE}] [skip ci]"
-          git -C /tmp/pages diff --cached --quiet || git -C /tmp/pages commit -m "$MSG"
-          git -C /tmp/pages push origin pages --force
+          MSG="ci: deploy $(date -u +%Y-%m-%dT%H:%M:%SZ) [${TRIGGER}${NOTE:+ — $NOTE}]"
+          npx wrangler@latest pages deploy target/roq/ \
+            --project-name=vidocq-site \
+            --branch=main \
+            --commit-message="$MSG"
