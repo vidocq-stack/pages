@@ -11,3 +11,7 @@ items:
   - title: Contributing
     path: /contributing/
     icon: fa-solid fa-code-pull-request
+  - title: Documentation
+    path: https://doc.vidocq.dev
+    icon: fa-solid fa-book
+    external: true

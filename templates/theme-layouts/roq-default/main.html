@@ -13,10 +13,17 @@ layout: default
     </a>
     <nav class="site-nav" id="site-nav" role="navigation" aria-label="Primary">
       {#for item in cdi:menu.items}
+      {#if item.containsKey('external')}
+      <a href="{item.path}" class="site-nav-link" target="_blank" rel="noopener noreferrer">
+        <i class="{item.icon}"></i>
+        <span>{item.title}</span>
+      </a>
+      {#else}
       <a href="{site.url(item.path)}" class="site-nav-link">
         <i class="{item.icon}"></i>
         <span>{item.title}</span>
       </a>
+      {/if}
       {/for}
     </nav>
     <div class="site-header-end">
