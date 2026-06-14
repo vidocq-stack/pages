@@ -1407,16 +1407,15 @@ img[alt="Vidocq banner"] {
 
 /* ── Alpha ribbon ─────────────────────────────────────────────── */
 /*
- * Container is 200×200px anchored at the top-right viewport corner.
- * The ::before strip is 240px wide, rotated 45°.
- * Geometry ensures all four corners of the strip fall outside the
- * container (left end above y=0, right end beyond x=200), so
- * overflow:hidden clips them cleanly — no visible rectangular angles.
+ * Container is 200x200px anchored at the top-left viewport corner.
+ * The ::before strip is 240px wide, rotated -45deg.
+ * Geometry keeps strip corners outside the container so overflow clipping
+ * stays clean without visible rectangular edges.
  */
 .vid-alpha-ribbon {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   z-index: 9999;
   pointer-events: none;
   overflow: hidden;
@@ -1428,7 +1427,7 @@ img[alt="Vidocq banner"] {
   content: "0.2.0 alpha";
   position: absolute;
   top: 52px;
-  right: -44px;
+  left: -44px;
   width: 240px;
   padding: 6px 0;
   background: linear-gradient(135deg, #92400e 0%, #d97706 100%);
@@ -1438,7 +1437,7 @@ img[alt="Vidocq banner"] {
   letter-spacing: 0.09em;
   text-align: center;
   text-transform: uppercase;
-  transform: rotate(45deg);
+  transform: rotate(-45deg);
   box-shadow: 0 2px 8px rgba(0,0,0,0.28);
 }
 
@@ -1446,8 +1445,16 @@ img[alt="Vidocq banner"] {
   .vid-alpha-ribbon { width: 160px; height: 160px; }
   .vid-alpha-ribbon::before {
     top: 42px;
-    right: -38px;
+    left: -38px;
     width: 200px;
     font-size: 9px;
   }
 }
+
+/* Keep the top-right area free on phones so the hamburger stays visible. */
+@media (max-width: 768px) {
+  .vid-alpha-ribbon {
+    display: none !important;
+  }
+}
+
