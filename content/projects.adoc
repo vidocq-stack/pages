@@ -14,6 +14,61 @@ publishes its own artifact to Maven Central on its own schedule.
 The dependency graph is strictly layered: foundational bricks have no dependency on each other;
 Jakarta layers compose bricks; MicroProfile layers sit on top.
 
+== TCK Status
+
+The table below summarizes the current official TCK position for each project.
+Projects with more than one official suite list each suite separately.
+
+[cols="2,4",options="header"]
+|===
+| Project | TCK status
+
+| `vauban`
+| CDI 4.1 Lite — 774/774 tests passed (100%).
+
+| `champollion`
+| JSON-P 2.1 — 179/179 tests passed (100%). JSON-B 3.0 — 290/295 tests passed (98.3%, 5 upstream skips).
+
+| `ravel`
+| MicroProfile Config 3.1 — 349/349 tests passed (100%).
+
+| `foy`
+| Jakarta Servlet 6.1 — 1,714 tests run, 921 passed (53.7% raw); the `api.*` family is at 95.6%.
+
+| `cassini`
+| Jakarta REST 4.0 — 2,670 tests run, 2,535 applicable passed (100% of applicable tests).
+
+| `heisenberg`
+| MicroProfile Fault Tolerance 4.1 — 463/463 tests passed (100%).
+
+| `cervantes`
+| MicroProfile JWT 2.1 — 206/206 tests passed (100%).
+
+| `cyrano`
+| MicroProfile Rest Client 4.0 — 168/168 tests passed (100%).
+
+| `dirac`
+| MicroProfile Metrics 5.1.1 — 127/127 tests passed (100%).
+
+| `grimm`
+| MicroProfile OpenAPI 4.1 — 349/349 tests passed (100%).
+
+| `humboldt`
+| MicroProfile Telemetry 2.1 — 85/85 tests passed (100%).
+
+| `knock`
+| MicroProfile Health 4.0 — 28/28 tests passed (100%).
+
+| `mansart`
+| Jakarta Data 1.0 — 74/74 tests passed (100%). Jakarta Transactions 2.0 — smoke suite 5/5 passed (100%).
+
+| `chappe`
+| Not applicable — transport project, not a spec implementation.
+
+| `vidocq`
+| Not applicable — orchestrator project, not a spec implementation.
+|===
+
 == Foundational Bricks
 
 These four modules have zero inter-dependencies and carry no external runtime libraries.
