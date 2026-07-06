@@ -1,0 +1,313 @@
+---
+title: The Story of Vidocq
+description: What if we asked an AI agent to implement the entire Jakarta EE Core Profile and MicroProfile, with zero external dependencies and no runtime bytecode manipulation? The story of a spec-driven development experiment pushed to the extreme, where the TCK is the merciless referee — 15 modules, 180,000 lines of Java and 5,650 acceptance tests passing.
+date: 2026-06-25
+layout: post
+authors: [yannblazart, antoinesabotdurand]
+tags: [Java, Jakarta EE, MicroProfile, CDI, AI]
+---
+
+image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+
+[NOTE]
+.But who was Vidocq?
+====
+Eugène-François Vidocq (1775–1857) was first a convict and an outlaw before becoming the first director of the Sûreté nationale, the ancestor of the French criminal investigation police. A master of disguise and infiltration, he knew crime from the inside, which made him the best placed to fight it. He is also regarded as the father of modern criminology and the inspiration for many fictional characters, from Balzac's Vautrin to Sherlock Holmes.
+
+The name was a natural fit for this project: like its namesake, this runtime knows the specifications from the inside, outwits their traps and applies a rigorous investigative method, with the TCK playing the role of the relentless investigator who lets no approximation slip through.
+====
+
+
+== It all started with a discussion about Spec-Driven Development
+
+It was during the excellent https://www.jchateau.org[JChateau^] unconference, on 7 March 2026, that the Vidocq adventure began.
+Discussions were in full swing about AI (between debates on sovereignty and the new features of Java 26) and about the arrival of a "new" concept: spec-driven development.
+After joking about the dev community reinventing the V-model, we realized that projects with rock-solid specifications were plentiful in the Java ecosystem with Jakarta EE and MicroProfile.
+
+Unlike most frameworks that set their own rules (such as Spring), these specs define precise, verifiable contracts, and each comes with a formidable acceptance test harness: the TCK (Technology Compatibility Kit).
+The specification documents plus the APIs plus the TCKs make up something quite unique in the world of software development.
+This mix was the ultimate spec for validating spec-driven development with a very concrete case: implementing one of the most ambitious specifications of Jakarta EE, Contexts and Dependency Injection (CDI).
+
+It was from this idea of experimentation that Vidocq was born.
+
+
+== The founding experiment: CDI 4.1
+
+=== Why start with CDI?
+
+For the less attentive readers, let us recall that we fell into the [.line-through]#J2EE#, [.line-through]#Java EE#, Jakarta EE cauldron when we were little.
+
+Moreover, Antoine was the CDI spec lead for versions 1.2 and 2.0 during his time at Red Hat.
+
+Add to that the fact that CDI is the backbone of Jakarta EE and MicroProfile. That it is one of the most complex specifications (interceptors, decorators, stereotypes, contextual scopes, producer injection, and so on). And it becomes clear why this specification was chosen as the testing ground for spec-driven development.
+
+It was the most ambitious bet and, at the same time, the most revealing one. If the experiment worked here, it could work anywhere.
+
+In practice, Antoine got to work that very evening, on 7 March 2026, on site at JChateau. This very first experiment, codenamed _Capsule_, still lives on GitHub in the https://github.com/Modilius/capsule/tree/copilot/create-cdi-lite-implementation[Modilius/capsule^] repository: 33 commits between 7 and 12 March 2026, an implementation of CDI 4.1 Lite (package `org.modilius`) generated with the agent, which quickly reached an initial result (60% of the TCK passing).
+
+It was then Yann who industrialized the task and saw it through. On 29 March 2026, the project restarted on clean foundations with _Vauban_, the future CDI container: this step turned an experiment into the bootstrap of a real project.
+
+=== Unprecedented constraints
+
+Where other implementations such as Weld (Red Hat) or ArC (Quarkus) rely on bytecode manipulation libraries, ASM, Byte Buddy, the rules imposed on the Vidocq implementation were radically different:
+
+* *Zero external dependencies*: no third-party framework, only the relevant Jakarta/MicroProfile APIs
+* *No runtime bytecode manipulation*: no dynamic proxies, no agents, no `setAccessible(true)` in production
+* *Static generation at compile time*: all the CDI "magic" (factories, proxies, interceptors) produced by the https://openjdk.org/jeps/484[Class-File API^] of JDK 25 and APT
+* *Strict JPMS*: each module has its own `module-info.java`, exports kept to a minimum
+* *Virtual Threads* everywhere for I/O
+* *AOT-compatible*: the result must run under GraalVM and Leyden CDS
+
+These constraints are not architects' whims. They define what Vidocq will be in production: a frictionless runtime, with no hidden layer, no surprise at native deployment time.
+
+== The three-step method
+
+The implementation of each spec followed the same ritual. This method was not invented all at once; it was built progressively as the CDI experiment advanced, and was then propagated to the other Vidocq modules.
+
+=== Phase 1, Constraints and plan
+
+Before writing a single line of code, we submit the specification and the constraints to the AI agent. We ask it to propose an implementation plan: module architecture, breakdown of responsibilities, code generation strategies.
+
+This plan is the real intellectual work at the start. We review it, question it, push it to its limits. Can we really avoid reflection here? How are we going to handle CDI scopes without dynamic proxies? The AI's answer is rarely right on the first try; it is the confrontation between its proposal and our knowledge of the specs that produces the final plan.
+
+=== Phase 2, Guided execution
+
+Once the plan is validated, we roll it out. The AI agent implements the spec section by section, test by test. The human role is that of a guide: steering, correcting the course when the AI drifts, flagging an inconsistency with a section of the spec read in parallel.
+
+It is a collaboration, not a delegation. The AI is not autonomous; it is precise and fast where an exhaustive reading of the spec would take weeks.
+
+=== Phase 3, The TCK as the absolute referee
+
+This is the longest phase, by far. Once the implementation is "theoretically correct", we confront it with the specification's TCK.
+
+_The TCK is the absolute referee: no cheating is possible, each test is a contract the AI must honor._
+
+The first runs are rarely brilliant. A red test reveals a subtlety of the spec that was misinterpreted. The AI fixes it, sometimes rewrites an entire portion of its implementation. We rerun. We make progress. The typical curve looks like this: 40% green on the first run, 70% after a day, the remaining 30% can take as long as everything else.
+
+It sometimes cheated a little on the rules by using bytecode manipulation rather than writing Java files.
+This was probably due to the model's training data, which must have contained far more examples of bytecode manipulation than of Java file generation.
+Some examples of this workaround were spotted while writing the implementation, others later during a more thorough analysis or while implementing new specifications that depend on CDI.
+
+
+== Vauban: the first victory
+
+Sébastien Le Prestre de Vauban was the military engineer of Louis XIV, the builder of impregnable fortifications. The name was a natural fit for the CDI container: solid, flawless, built to hold.
+
+The need for MicroProfile was to implement only the Lite part of the spec, which excludes the features tied to EJB and the legacy extension system in favor of the new Build Time Compatible Extensions introduced in CDI 3.0.
+
+*Vauban, CDI 4.1 Lite: 774/774 TCK tests. 100%.*
+
+The "fortress" Vauban took about ten days to fall.
+
+When the 774th test turned green, the team understood that the initial "game" was about to become more serious.
+Indeed, this result validated the whole bet. An AI could implement a complex Java Enterprise specification, with unprecedented constraints, and pass the official test suite without a single failure. It was no longer a hypothesis.
+
+== The expansion: from CDI to a complete stack
+
+The natural question after Vauban was: if it works for CDI, how far can we go?
+
+The answer, built module by module over the weeks, is Vidocq in its current state: *nineteen repos including fifteen independent modules* covering the entire Core Profile and MicroProfile.
+
+The timeline below traces this construction, from the _Capsule_ prototype born at JChateau to the open source release. The dates correspond to the first and last commit of each repository.
+
+.Vidocq timeline: from the Capsule prototype (JChateau) to the open source release
+[plantuml, format=svg, opts=inline]
+----
+@startgantt
+include::../plantuml-skin.iuml[]
+<style>
+ganttDiagram {
+  task {
+    LineColor #2e3a56
+    LineThickness 2
+  }
+  milestone {
+    LineColor #2e3a56
+    LineThickness 2
+  }
+}
+</style>
+title Vidocq timeline (March - June 2026)
+printscale weekly zoom 2
+Project starts 2026-03-02
+saturday are open
+sunday are open
+
+-- Genesis --
+[JChateau] happens 2026-03-07
+[JChateau] is colored in #ffec3f
+[Capsule: CDI Lite prototype] as [CAPS] starts 2026-03-07 and ends 2026-03-12
+[CAPS] is colored in #9abcc3
+
+-- Core Profile --
+[Vauban: CDI 4.1] as [VAUBAN] starts 2026-03-29 and ends 2026-06-17
+[VAUBAN] is colored in #9abcc3
+[Vidocq: runtime orchestrator] as [VIDOCQ] starts 2026-04-10 and ends 2026-06-21
+[VIDOCQ] is colored in #9abcc3
+[Chappe: HTTP server] as [CHAPPE] starts 2026-04-16 and ends 2026-06-14
+[CHAPPE] is colored in #9abcc3
+[Cassini: Jakarta REST 4.0] as [CASSINI] starts 2026-04-27 and ends 2026-06-15
+[CASSINI] is colored in #9abcc3
+[Foy: Jakarta Servlet 6.1] as [FOY] starts 2026-04-30 and ends 2026-06-14
+[FOY] is colored in #d1d5db
+[Champollion: JSON-P / JSON-B] as [CHAMP] starts 2026-05-01 and ends 2026-06-16
+[CHAMP] is colored in #9abcc3
+[Mansart: Jakarta Data + Tx] as [MANSART] starts 2026-05-04 and ends 2026-06-14
+[MANSART] is colored in #9abcc3
+[Ravel: MP Config] as [RAVEL] starts 2026-05-07 and ends 2026-06-14
+[RAVEL] is colored in #9abcc3
+
+-- MicroProfile --
+[Knock: MP Health] as [KNOCK] starts 2026-05-10 and ends 2026-06-15
+[KNOCK] is colored in #cdd8ea
+[Cyrano: MP Rest Client] as [CYR] starts 2026-05-12 and ends 2026-06-14
+[CYR] is colored in #cdd8ea
+[Heisenberg: MP Fault Tolerance] as [HEIS] starts 2026-05-16 and ends 2026-06-14
+[HEIS] is colored in #cdd8ea
+[Humboldt: MP Telemetry] as [HUMB] starts 2026-05-20 and ends 2026-06-14
+[HUMB] is colored in #cdd8ea
+[Dirac: MP Metrics] as [DIRAC] starts 2026-05-22 and ends 2026-06-15
+[DIRAC] is colored in #cdd8ea
+[Cervantes: MP JWT] as [CERV] starts 2026-05-26 and ends 2026-06-14
+[CERV] is colored in #cdd8ea
+[Grimm: MP OpenAPI] as [GRIMM] starts 2026-05-26 and ends 2026-06-14
+[GRIMM] is colored in #cdd8ea
+
+-- Publication --
+[Open source] happens 2026-06-25
+[Open source] is colored in #ffec3f
+@endgantt
+----
+
+=== The fundamental bricks
+
+*Chappe* was born out of necessity: to implement Servlet and REST, an HTTP server was needed. Rather than depending on Netty or Jetty, which would have broken the zero-dependency rule, Chappe was written from scratch. The name pays tribute to Claude Chappe (1763–1805), inventor of the semaphore telegraph, that network of optical towers that covered the whole of France. The Chappe project is its digital heir: a communication network in pure Java.
+
+*Champollion* handles JSON-P, JSON-B and a new protobuf implementation. Jean-François Champollion deciphered the hieroglyphs; the project is the Rosetta Stone of inter-service exchanges. *Ravel* (MicroProfile Config) is named after the composer Maurice Ravel, who knew how to orchestrate the configuration of a complex score.
+
+=== Jakarta EE
+
+With Chappe, Vauban and Champollion in place, *Cassini* (Jakarta REST 4.0) and *Foy* (Jakarta Servlet 6.1) could rely on solid foundations. Cassini, named after the famous family of French astronomers and cartographers, now totals *2,535 TCK tests* all green.
+To date, *Foy* is still under development. Indeed, since this specification is not part of the Core Profile, it was not a priority. But it is well on its way: 1,261 TCK tests are already green.
+
+=== MicroProfile: eight specifications
+
+Once the Core Profile was established, the expansion toward MicroProfile was logical. The eight specs were tackled in an order dictated by dependencies:
+
+[cols="1,2,2,1", options="header"]
+|===
+| Module
+| Specification
+| Inspiration
+| TCK
+
+| *Heisenberg*
+| MicroProfile Fault Tolerance 4.1
+| Werner Heisenberg, uncertainty is inherent to network calls
+| 463/463
+
+| *Cervantes*
+| MicroProfile JWT 2.1
+| Cervantes / Don Quixote: to _proclaim_ an identity, and to truly _verify_ it
+| 206/206
+
+| *Cyrano*
+| MicroProfile Rest Client 4.0
+| Cyrano de Bergerac, eloquence in the service of another
+| 168/168
+
+| *Dirac*
+| MicroProfile Metrics 5.1.1
+| Paul Dirac, quantum physics and measurement
+| 127/127
+
+| *Grimm*
+| MicroProfile OpenAPI 4.1
+| Jacob Grimm, famous for his work in linguistics and language classification (documenting an API)
+| 349/349
+
+| *Humboldt*
+| MicroProfile Telemetry 2.1
+| Alexander von Humboldt, observe, measure, correlate across all layers
+| 85/85
+
+| *Knock*
+| MicroProfile Health 4.0
+| Doctor Knock, who finds everyone either sick or in good health
+| 28/28
+
+| *Ravel*
+| MicroProfile Config 3.1
+| Maurice Ravel, orchestrating configuration
+| 349/349
+|===
+
+
+=== The persistence layer
+
+*Mansart* (Jakarta Data 1.0 + Transactions 2.0) completes the set on the persistence side. Jules Hardouin-Mansart, the architect of Versailles, lays the data foundations. Jakarta Persistence 3.2 remains pending, a conscious decision to go as far as possible without sacrificing the principles.
+
+
+== The final numbers
+
+Fifteen modules. A single rule: pass the TCK.
+
+[cols="2,3,1", options="header"]
+|===
+| Scope
+| Specifications
+| TCK tests
+
+| *Core Profile*
+| CDI 4.1, REST 4.0, JSON-P 2.1, JSON-B 3.0, Config 3.1, Servlet 6.1
+| *3,796*
+
+| *MicroProfile*
+| Fault Tolerance, JWT, Rest Client, Metrics, OpenAPI, Telemetry, Health, Config
+| *1,775*
+
+| *Additional & Runtime*
+| Jakarta Data 1.0, Transactions 2.0, Vidocq orchestrator
+| *79*
+
+| *Total*
+|
+| *5,650 TCK tests*
+|===
+
+*180,000+ lines of Java* generated with an AI agent under constraints.
+
+No disabled TCK test. No unjustified external dependency. No runtime bytecode manipulation.
+
+
+== On the shoulders of giants
+
+These numbers are impressive, but they hide another one, far greater and far older: that of the women and men who wrote, debated and refined these specifications for nearly twenty years. Vidocq invents none of what it implements; it executes, faithfully and at full speed, contracts matured by an entire community.
+
+The bricks of the Core Profile are not new. CDI was born in the mid-2000s (JSR 299, finalized in late 2009 with Java EE 6), Jakarta REST (formerly JAX-RS) started in 2007, and JSON-P, JSON-B and the common annotations followed in the 2010s. All this work, first carried out within the Java Community Process, then moved under the open governance of the Eclipse Foundation from 2017-2018. MicroProfile, for its part, was founded in 2016 to carry this heritage toward microservices, and has kept growing ever since. The Core Profile as implemented by Vidocq was formalized in 2022 with Jakarta EE 10.
+
+On the public repositories of these fifteen specifications alone, we count nearly 200 identifiable contributors, and this count ignores the JCP expert groups of the 2000s, predating GitHub. Behind these names: Red Hat, IBM, Oracle, Payara, Tomitribe, Microsoft and a worldwide open source community that, release after release, turned intentions into verifiable contracts.
+
+This is the happy paradox of Vidocq: a stack assembled in a few weeks by augmented developers only stands because it relies on nearly twenty years of collective specifications. The TCK that serves as referee, the APIs we implement, the contracts we respect: all of this is the heritage of a colossal effort. Without these giants, Vidocq would simply not exist. If it sees so far, it is because it stands on their shoulders.
+
+== What Vidocq demonstrates
+
+Even though the stack started as a challenge, Vidocq went beyond a mere demonstration. It is a production-grade implementation of the entire Jakarta EE Core Profile and MicroProfile, with architectural constraints that mainstream frameworks have not yet adopted.
+
+The method, strong constraints + plan + guidance + TCK as referee, is reproducible. It imposes on the AI a rigor that classic unit tests do not guarantee. The TCK does not lie, does not tolerate approximations, does not adapt to what the implementation feels like doing.
+
+This is perhaps the most important lesson of Vidocq: an AI performs all the better when it has an objective, external and inflexible judge. The specification is that judge.
+
+
+== What's next?
+
+Vidocq is now made available to the community under a triple license: EUPL 1.2, EPL 2 and GPL 2.0. It can be used for personal or professional projects, studied, modified and redistributed.
+
+We will keep evolving the stack by adding tools to the integration module to make developers' lives easier.
+A roadmap is being built for the next Jakarta EE and MicroProfile specifications and the tooling.
+Your ideas and contributions are welcome to feed these discussions and their future implementations.
+An opportunity for you to get started with augmented development?
+
+The code is available on https://codeberg.org/Vidocq[Codeberg^]. The method is documented and reusable to develop other bricks.
+
+Welcome to Vidocq!

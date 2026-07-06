@@ -1,0 +1,224 @@
+---
+title: "How to Start Your First Vidocq App"
+description: From zero to a booted runtime in under ten minutes with the new Vidocq CLI — doctor, create, build, start, and your first extension.
+date: 2026-07-03
+layout: post
+authors: [yannblazart, antoinesabotdurand]
+tags: [tutorial, cli, getting-started, java]
+---
+
+image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+
+Vidocq is a zero-dependency Jakarta EE / MicroProfile runtime for Java 25: JPMS-native, virtual-threads-first, and built on compile-time code generation instead of runtime reflection. The runtime now ships a command-line interface, and this post walks through it end to end: scaffold a new application, boot it, and wire in your first extension — in under ten minutes.
+
+== Prerequisites
+
+* **Java 25** (Temurin recommended)
+* **Maven 3.9.16**
+
+Every Vidocq repository pins both via `.sdkmanrc`, so `sdk env` inside a checkout puts you on the right versions.
+
+== Install the CLI (from Maven Central)
+
+Vidocq 0.2.0 is published to Maven Central — every brick of the ecosystem, CLI included — so installing it is one dependency resolution away, no checkout required. The CLI is a plain JPMS module (`io.vidocq.runtime.cli`) with zero dependencies beyond the JDK and the runtime core, so "installing" it just means putting it and its runtime closure on a module path. Let Maven collect everything into one directory:
+
+[source,bash]
+----
+mkdir -p ~/.vidocq/cli && cd ~/.vidocq/cli
+
+cat > pom.xml <<'EOF'
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>local</groupId>
+    <artifactId>vidocq-cli-install</artifactId>
+    <version>0</version>
+    <dependencies>
+        <dependency>
+            <groupId>io.vidocq.runtime</groupId>
+            <artifactId>vidocq-runtime-cli</artifactId>
+            <version>0.2.0</version>
+        </dependency>
+    </dependencies>
+</project>
+EOF
+
+mvn -q dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=modules
+----
+
+then define a `vidocq` shell function in your `~/.bashrc` or `~/.zshrc`:
+
+[source,bash]
+----
+vidocq() {
+  java -p "$HOME/.vidocq/cli/modules" \
+       -m io.vidocq.runtime.cli/io.vidocq.runtime.cli.VidocqCli "$@"
+}
+----
+
+Tab completion is one line away: `source <(vidocq completion bash)`.
+
+== Check your environment
+
+[source,bash]
+----
+vidocq doctor
+----
+
+[source]
+----
+Vidocq doctor — environment & project checks
+
+  ✔ Java version     Java 25
+  ✔ JAVA_HOME        /Users/you/.sdkman/candidates/java/25-tem
+  ⚠ Maven wrapper    no mvnw on this path
+  ⚠ Vidocq project   no pom.xml in the current directory
+  ✔ Config           no vidocq.properties (built-in defaults apply)
+  ⚠ Extensions       no extensions on the classpath
+
+✔ No blocking issues found.
+  6 checks — 3 ok, 3 warning(s), 0 failed
+----
+
+Warnings are expected outside a project. `doctor` only exits non-zero on a blocking ✘, which makes it a handy CI pre-flight gate: `vidocq doctor && vidocq build`.
+
+== Scaffold the project
+
+[source,bash]
+----
+vidocq create --name hello-world --group-id com.example
+----
+
+[source]
+----
+ℹ Scaffolding project 'hello-world'…
+✔ Project 'hello-world' created.
+
+  Navigate:  cd hello-world
+  Build:     ./mvnw package
+  Run:       vidocq start
+----
+
+Four files, nothing hidden:
+
+[source]
+----
+hello-world/
+├── pom.xml                          # inherits vidocq-runtime-parent, depends on core
+└── src/main/
+    ├── java/
+    │   ├── module-info.java
+    │   └── com/example/hello/world/
+    │       └── HelloWorldApp.java
+    └── resources/
+        └── vidocq.properties        # vidocq.http.port=8080
+----
+
+The module descriptor is a single `requires` — no `opens`, no classpath:
+
+[source,java]
+----
+module com.example.hello.world {
+    requires io.vidocq.runtime.core;
+}
+----
+
+and the entry point is a complete, runnable Vidocq application:
+
+[source,java]
+----
+package com.example.hello.world;
+
+import io.vidocq.runtime.core.VidocqBootstrap;
+
+public final class HelloWorldApp {
+
+    public static void main(String[] args) {
+        VidocqBootstrap.create()
+                .configure()
+                .start()
+                .awaitShutdown();
+    }
+}
+----
+
+One heads-up: the scaffold does not ship a Maven wrapper yet, so `vidocq build` falls back to the `mvn` on your `PATH` — make sure it is 3.9.16.
+
+== Build and boot it
+
+[source,bash]
+----
+cd hello-world
+vidocq build --skip-tests
+vidocq start
+----
+
+[source]
+----
+ℹ Starting Vidocq on port 8080…
+INFO: Vidocq - Configuration phase
+WARNING: No Vidocq extensions discovered
+INFO: Vidocq - Starting
+INFO: Vidocq - Started in 39.755 ms (process running for 82 ms)
+----
+
+Under 40 milliseconds to a running runtime — no reflection scan, no proxy generation at boot. The warning is honest, though: a bare core application boots the lifecycle but serves nothing, because in Vidocq *everything* is an extension.
+
+For iterating, prefer dev mode: `vidocq dev` watches your sources and resources and re-applies configuration in-process on every change, and `--debug` prints the JDWP line a debugger can attach to.
+
+== Add your first extension
+
+Extensions are how a Vidocq application grows capabilities — each one wraps an independent brick of the ecosystem. The CLI knows the catalog:
+
+[source,bash]
+----
+vidocq extension list --available
+----
+
+[source]
+----
+Available extensions:
+  • chappe-webserver       Chappe HTTP web server
+  • ravel-config           MicroProfile Config
+  • cassini-rest           Jakarta REST (JAX-RS) endpoints
+  • cyrano-rest-client     MicroProfile REST Client
+  • cervantes-jwt          MicroProfile JWT authentication
+  • humboldt-telemetry     MicroProfile Telemetry (tracing)
+  • knock-health           MicroProfile Health checks
+  • dirac-metrics          MicroProfile Metrics
+  • mansart-data           Jakarta Persistence (JPA)
+  • mansart-pool           JDBC connection pooling
+  • mansart-transactions   Jakarta Transactions (JTA)
+----
+
+Adding one edits your `pom.xml` in place — text-based, format-preserving, idempotent:
+
+[source,bash]
+----
+vidocq extension add cassini-rest
+----
+
+[source]
+----
+✔ Added cassini-rest  (io.vidocq.runtime.extensions.jakartaee.core:vidocq-runtime-cassini-rest-extension)
+
+✔ pom.xml updated.
+----
+
+From there, a `@Path` resource class is all Cassini needs: its annotation processor generates the dispatch adapters at compile time and wires them through JPMS `provides` clauses — zero runtime reflection, zero `opens`, GraalVM-friendly. The complete walkthrough (REST resource, CDI, H2 persistence, `curl` calls) lives in the https://doc.vidocq.dev[reference documentation]'s getting-started guide, and we won't duplicate it here.
+
+== Package it
+
+When you are ready to ship, the CLI wraps the packaging goals of the Vidocq Maven plugin:
+
+[source,bash]
+----
+vidocq build            # standalone distribution
+vidocq build jlink      # self-contained runtime image, no java needed on the target
+vidocq build docker     # Dockerfile around the jlink image
+----
+
+== Where to go next
+
+* The https://doc.vidocq.dev[reference documentation] — the full REST + persistence getting-started guide and the complete CLI user guide.
+* link:/posts/why-vidocq-is-built-as-independent-bricks/[Why Vidocq is built as independent bricks] — the architecture rationale behind the extension catalog you just used.
+* link:/contributing/[Contributing] — the ecosystem is young and moving fast; issues and PRs are welcome on https://codeberg.org/Vidocq[Codeberg].

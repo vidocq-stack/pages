@@ -15,6 +15,7 @@
         <quarkus.platform.version>3.36.1</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.6</surefire-plugin.version>
+        <quarkus-roq.version>2.1.5</quarkus-roq.version>
     </properties>
 
     <dependencyManagement>
@@ -33,22 +34,26 @@
         <dependency>
             <groupId>io.quarkiverse.roq</groupId>
             <artifactId>quarkus-roq</artifactId>
-            <version>2.1.3</version>
+            <version>${quarkus-roq.version}</version>
         </dependency>
         <dependency>
             <groupId>io.quarkiverse.roq</groupId>
             <artifactId>quarkus-roq-theme-default</artifactId>
-            <version>2.1.3</version>
+            <version>${quarkus-roq.version}</version>
         </dependency>
         <dependency>
             <groupId>io.quarkiverse.roq</groupId>
             <artifactId>quarkus-roq-plugin-asciidoc-jruby</artifactId>
-            <version>2.1.3</version>
+            <version>${quarkus-roq.version}</version>
         </dependency>
         <dependency>
+            <!-- PlantUML engine for asciidoctorj-diagram (not pulled transitively).
+                 Previously pinned to 1.2024.5 to work around broken sketchy rendering;
+                 verified fixed with current releases (sketchy theme + handwritten
+                 fonts render correctly, defaultFontName is now honored). -->
             <groupId>org.asciidoctor</groupId>
             <artifactId>asciidoctorj-diagram-plantuml</artifactId>
-            <version>1.2024.5</version>
+            <version>1.2026.2</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>

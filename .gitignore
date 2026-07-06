@@ -46,3 +46,8 @@ nb-configuration.xml
 
 # Roq tooling
 node_modules/
+
+# asciidoctor-diagram generated artifacts (rendered next to the source .adoc)
+content/**/diag-*.svg
+content/**/diag-plantuml-md5*
+content/**/*.svg.cache

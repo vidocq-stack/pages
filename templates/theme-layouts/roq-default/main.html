@@ -93,3 +93,54 @@ layout: default
   })();
 </script>
 
+<script>
+  (() => {
+    // Add copy button to code blocks (pages, blog articles, everywhere)
+    const addCopyButtons = () => {
+      const preBlocks = document.querySelectorAll(
+        '.vid-page-content pre, .vid-article-content pre, .asciidoc-prose pre, .content-prose pre'
+      );
+
+      preBlocks.forEach((pre) => {
+        // Wrapper is the asciidoctor .listingblock if present, otherwise the <pre> itself.
+        const wrapper = pre.closest('.listingblock') || pre;
+        if (wrapper.querySelector(':scope > .code-copy-btn')) return;
+
+        // Capture the code text before inserting the button so it's never copied along.
+        const codeEl = pre.querySelector('code');
+        const codeText = (codeEl || pre).textContent;
+
+        const btn = document.createElement('button');
+        btn.className = 'code-copy-btn';
+        btn.setAttribute('type', 'button');
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.innerHTML = '<i class="fa-solid fa-copy"></i>';
+
+        btn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(codeText);
+            btn.classList.add('copied');
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            btn.setAttribute('aria-label', 'Copied!');
+            setTimeout(() => {
+              btn.classList.remove('copied');
+              btn.innerHTML = '<i class="fa-solid fa-copy"></i>';
+              btn.setAttribute('aria-label', 'Copy code');
+            }, 2000);
+          } catch (err) {
+            console.error('Failed to copy code:', err);
+          }
+        });
+
+        wrapper.classList.add('code-block-wrapper');
+        wrapper.appendChild(btn);
+      });
+    };
+
+    // Run on initial load
+    addCopyButtons();
+
+    // Run again after a short delay to catch dynamically rendered content
+    setTimeout(addCopyButtons, 500);
+  })();
+</script>

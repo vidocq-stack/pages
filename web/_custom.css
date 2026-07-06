@@ -693,7 +693,7 @@
 
 .article-page .wrap-content,
 .page-content .content-main {
-  max-width: 780px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
@@ -850,10 +850,71 @@ img[alt="Vidocq banner"] {
 }
 
 /* Source blocks */
-.vid-page-content .listingblock pre,
-.vid-page-content pre {
+.vid-page-content pre,
+.vid-article-content pre,
+.asciidoc-prose pre,
+.content-prose pre {
   border-radius: 0.625rem;
   font-size: 0.88rem;
+}
+
+/* Wrapper (listingblock, or the <pre> itself as fallback) becomes the
+   positioning context for the copy button. */
+.code-block-wrapper {
+  position: relative;
+}
+
+.code-copy-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+  border: none;
+  border-radius: 0.375rem;
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.code-copy-btn:hover,
+.code-copy-btn:focus-visible {
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+}
+
+.code-block-wrapper:hover .code-copy-btn,
+.code-copy-btn:focus-visible {
+  opacity: 1;
+}
+
+.code-copy-btn.copied {
+  background: rgba(34,197,94,0.7);
+  color: #fff;
+}
+
+.code-copy-btn.copied i {
+  animation: pulse 0.3s ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+@media (hover: none) {
+  /* Touch devices have no hover: keep the button always visible. */
+  .code-copy-btn {
+    opacity: 1;
+  }
 }
 
 /* ─── PlantUML / asciidoctor-diagram ─────────────────────────── */
@@ -1059,7 +1120,7 @@ img[alt="Vidocq banner"] {
 }
 
 .vid-article-hero-inner {
-  max-width: 940px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 0 6vw;
 }
@@ -1122,7 +1183,7 @@ img[alt="Vidocq banner"] {
 
 /* Article body */
 .vid-article-content {
-  max-width: 940px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 3rem 6vw 4rem;
 }
@@ -1227,9 +1288,16 @@ img[alt="Vidocq banner"] {
 
 .vid-share-btn .fa-bluesky { color: #0085ff; }
 
+/* Author cards wrapper */
+.vid-article-authors {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
 /* Author card */
 .vid-article-author {
-  margin-top: 2.5rem;
   padding: 1.5rem;
   background: #f8faff;
   border: 1px solid #e2e8f0;
@@ -1276,6 +1344,218 @@ img[alt="Vidocq banner"] {
 }
 
 .dark .vid-article-author-job { color: #9ca3af; }
+
+/* ─── Author pages ───────────────────────────────────────────── */
+
+.vid-author-hero {
+  background: var(--color-accent-900);
+  padding: 1.5rem 0 0;
+}
+
+.vid-author-hero-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 6vw;
+}
+
+.vid-author-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 6vw 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.vid-author-profile {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  padding: 2rem;
+  background: #f8faff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+}
+
+.dark .vid-author-profile {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.vid-author-avatar {
+  width: 7rem;
+  height: 7rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.vid-author-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vid-author-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.vid-author-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+}
+
+.dark .vid-author-name { color: #f3f4f6; }
+
+.vid-author-job {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.dark .vid-author-job { color: #9ca3af; }
+
+.vid-author-bio {
+  font-size: 0.95rem;
+  color: #374151;
+  line-height: 1.65;
+  margin: 0.5rem 0 0;
+}
+
+.dark .vid-author-bio { color: #d1d5db; }
+
+.vid-author-socials {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.vid-author-social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #374151;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.vid-author-social-link:hover {
+  background: var(--color-accent-600);
+  color: #fff;
+}
+
+.dark .vid-author-social-link {
+  background: rgba(255,255,255,0.1);
+  color: #d1d5db;
+}
+
+.dark .vid-author-social-link:hover {
+  background: var(--color-accent-500);
+  color: #fff;
+}
+
+.vid-author-posts-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 1.5rem;
+}
+
+.dark .vid-author-posts-title { color: #f3f4f6; }
+
+/* ─── Authors listing page ───────────────────────────────────── */
+
+.vid-authors-list {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 6vw 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.vid-authors-card {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  padding: 1.5rem;
+  background: #f8faff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  text-decoration: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.vid-authors-card:hover {
+  border-color: var(--color-accent-400);
+  box-shadow: 0 4px 20px rgba(29,78,216,0.08);
+}
+
+.dark .vid-authors-card {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.dark .vid-authors-card:hover {
+  border-color: var(--color-accent-500);
+}
+
+.vid-authors-card-avatar {
+  width: 5rem;
+  height: 5rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.vid-authors-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vid-authors-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.vid-authors-card-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.dark .vid-authors-card-name { color: #f3f4f6; }
+
+.vid-authors-card-job {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.dark .vid-authors-card-job { color: #9ca3af; }
+
+.vid-authors-card-bio {
+  font-size: 0.875rem;
+  color: #374151;
+  line-height: 1.6;
+  margin-top: 0.4rem;
+}
+
+.dark .vid-authors-card-bio { color: #d1d5db; }
 
 /* ─── Responsive ─────────────────────────────────────────────── */
 

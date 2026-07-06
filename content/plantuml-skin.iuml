@@ -1,5 +1,9 @@
 ' Vidocq site — global PlantUML skin
-' Applied automatically to every diagram via quarkus.asciidoc.attributes.plantuml-include
+' Pulled into each diagram block with a plain AsciiDoc include directive placed
+' right after the @start line (path is relative to the .adoc file, e.g. from
+' content/posts/ the target is ../plantuml-skin.iuml). Roq resolves
+' cross-directory includes against the site root, so this single file works
+' from every content directory.
 ' Uses the built-in sketchy-outline theme + Vidocq EU-blue palette overrides
 
 !theme sketchy-outline

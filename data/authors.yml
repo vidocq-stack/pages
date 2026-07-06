@@ -1,5 +1,30 @@
 vidocq-team:
   name: Vidocq Team
+  nickname: vidocq
   job: Jakarta and MicroProfile Runtime Engineering
-  profile: https://forge.vidocq.dev/vidocq
-  bio: Building a modern Java runtime ecosystem with strong modular boundaries.
+  profile: /authors/vidocq-team/
+  avatar: authors/vidocq-logo.png
+  bio: The team behind the Vidocq runtime — building a complete, dependency-free implementation of Jakarta EE Core Profile and MicroProfile in pure Java, validated by 5,650 official TCK tests.
+  codeberg: https://codeberg.org/Vidocq
+
+antoinesabotdurand:
+  name: Antoine Sabot-Durand
+  nickname: antoine_sd
+  job: IT Director at SCIAM
+  profile: /authors/antoinesabotdurand/
+  avatar: authors/antoinesabotdurand.png
+  bio: Java Champion and Jakarta EE/CDI expert. Former CDI Specification Lead (versions 1.2 and 2.0), CDI 4.0 contributor and MicroProfile Working Group member. Also led the MicroProfile Fault Tolerance and Health specifications.
+  bluesky: antoine.sabot-durand.net
+  linkedin: antoinesabotdurand
+  website: https://next-presso.com
+
+yannblazart:
+  name: Yann Blazart
+  nickname: yannblazart
+  job: Senior Tech Lead at SCIAM
+  profile: /authors/yannblazart/
+  avatar: authors/yannblazart.jpg
+  bio: Jakarta EE/MicroProfile architect and senior tech lead, co-creator of LangChain4j-CDI. Regular speaker at Devoxx France, JavaOne, Paris JUG and Devoxx Belgium on Jakarta EE and CDI.
+  linkedin: yann-blazart
+  bluesky: yblazart.bsky.social
+

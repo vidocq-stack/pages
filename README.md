@@ -45,11 +45,13 @@ Open http://localhost:8080. Changes to content, CSS, and templates are picked up
 ## Build and generate the static site
 
 ```bash
-# 1. Compile and package
-mvn package -ntp -DskipTests
+# 1. Compile and package with the batch generator baked in
+#    (quarkus.roq.generator.batch is a build-time property since Roq 2.1.x —
+#    passing it with -D at runtime has no effect)
+./mvnw package -ntp -DskipTests -Dquarkus.roq.generator.batch=true
 
 # 2. Run the generator (outputs to target/roq/)
-java -Dquarkus.roq.generator.batch=true -jar target/quarkus-app/quarkus-run.jar
+java -jar target/quarkus-app/quarkus-run.jar
 ```
 
 The complete static site is written to **`target/roq/`**. Open `target/roq/index.html` in a browser to verify before publishing.
@@ -78,6 +80,35 @@ The complete static site is written to **`target/roq/`**. Open `target/roq/index
 1. Add a `.adoc` file in `content/` (e.g., `content/roadmap.adoc`).
 2. Front matter must include `layout: page` and `link: /roadmap/`.
 3. Add the page to `data/menu.yml` if it should appear in the top navigation.
+
+## PlantUML diagrams
+
+Diagrams are rendered at build time by `asciidoctor-diagram` (bundled PlantUML, no
+external service) and embedded as **inline SVG** — no image files are published.
+
+A single shared skin, **`content/plantuml-skin.iuml`** (sketchy-outline theme +
+Vidocq EU-blue palette), is pulled into each diagram with a plain AsciiDoc include.
+Roq's include processor resolves cross-directory includes against the site root,
+so the same file works from any content directory:
+
+```
+[plantuml, format=svg, opts=inline]
+----
+@startuml
+' from content/posts/ use ../plantuml-skin.iuml; from content/ use plantuml-skin.iuml
+include::../plantuml-skin.iuml[]
+...
+@enduml
+----
+```
+
+Notes:
+
+- Do **not** use the `config="..."` block attribute for the skin: asciidoctor-diagram
+  jails it to each file's directory, which previously forced a duplicated skin file
+  at the repository root and "path is outside of jail" warnings.
+- asciidoctor-diagram drops working files (`diag-*.svg` + `.svg.cache`) next to the
+  sources; they are build by-products and are covered by `.gitignore`.
 
 ---
 

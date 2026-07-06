@@ -1,0 +1,80 @@
+---
+title: "Vidocq: A Sovereign Jakarta EE and MicroProfile Runtime"
+description: We are releasing Vidocq as open source — a complete implementation of the Jakarta EE Core Profile and MicroProfile, written in pure Java, with zero external dependencies, validated by 5,650 official TCK tests. A runtime designed for sovereignty, standards and security.
+date: 2026-07-06
+layout: post
+authors: [yannblazart, antoinesabotdurand]
+tags: [Java, Jakarta EE, MicroProfile, Sovereignty, Open source]
+---
+
+image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+
+Today, we deliver *Vidocq* to the community: a complete and self-contained implementation of the *Jakarta EE Core Profile* and *MicroProfile*, written entirely in Java, *without a single external dependency*, and validated by *5,650 official TCK tests*.
+
+Vidocq is available right now as open source on https://codeberg.org/Vidocq[Codeberg^], under a triple license: EUPL 1.2, EPL 2 and GPL 2.0. The project is still in *alpha*: everything is documented and explored on https://vidocq.dev[vidocq.dev^].
+
+== Why Vidocq matters
+
+Three convictions guided this project, and they can be read right down to its code.
+
+=== Sovereignty: a European stack, right down to the names
+
+Vidocq is not just a runtime: it is a manifesto for European, open and self-controlled computing. The project is hosted on https://codeberg.org/Vidocq[Codeberg^], a European non-profit forge, and published under open licenses including the EUPL, the European Union Public Licence.
+
+This heritage shows even in the code names of the modules, which pay tribute to figures of European scientific and cultural heritage. *Vauban*, the engineer of Louis XIV's fortifications, gives his name to the CDI container, solid and flawless. *Chappe*, inventor of the optical telegraph, names the HTTP server written from scratch. *Cassini* (REST), *Champollion* (JSON), *Ravel* (Config), *Cervantes* (JWT), *Cyrano* (Rest Client) and *Humboldt* (Telemetry) extend this gallery. And at the top, *Vidocq*, the first director of the Sûreté nationale, who knows the specifications from the inside in order to honor them better.
+
+=== Standards: zero proprietary, 100% specifications
+
+Vidocq invents no framework and imposes no in-house rule. It faithfully implements *open standards*: CDI, Jakarta REST, JSON-P/B, Config, Servlet, and eight MicroProfile specifications.
+
+The proof is not declarative, it is measured. Each module is confronted with the *TCK (Technology Compatibility Kit)*, the official acceptance test suite of each specification, the merciless arbiter of conformance.
+
+[cols="2,3,1", options="header"]
+|===
+| Scope | Specifications | TCK tests
+
+| *Core Profile*
+| CDI 4.1, REST 4.0, JSON-P 2.1, JSON-B 3.0, Config 3.1, Servlet 6.1
+| *3,796*
+
+| *MicroProfile*
+| Fault Tolerance, JWT, Rest Client, Metrics, OpenAPI, Telemetry, Health, Config
+| *1,775*
+
+| *Additional & Runtime*
+| Jakarta Data 1.0, Transactions 2.0, Vidocq orchestrator
+| *79*
+
+| *Total*
+|
+| *5,650 TCK tests passing*
+|===
+
+No disabled TCK test. Choosing Vidocq means choosing a standard, not a vendor: your applications stay portable, with no proprietary lock-in.
+
+=== Security: what does not exist cannot be attacked
+
+The largest attack surface of a modern application is its dependency chain. https://en.wikipedia.org/wiki/Log4Shell[Log4Shell^] reminded us of this brutally: a flaw in a transitive library, and the whole ecosystem trembles.
+
+Vidocq tackles the problem at the root with a radical rule: *zero external dependencies*. Only the Jakarta and MicroProfile APIs, and pure Java.
+
+* *No third-party library*: no Netty, no Jetty, no ASM, no Byte Buddy. No inherited CVE.
+* *No runtime bytecode manipulation*: no dynamic proxy, no agent, no `setAccessible(true)` in production. All the "magic" is generated at compile time via the https://openjdk.org/jeps/484[Class-File API^] of JDK 25.
+* *Strict JPMS, AOT-compatible*: isolated modules, minimal exports, compatible with GraalVM and Leyden CDS.
+
+The result: a software supply chain reduced to its simplest expression, auditable end to end, and a native startup with no surprises.
+
+== In numbers
+
+* *15 independent modules* covering the entire Core Profile and MicroProfile
+* *5,650 official TCK tests* passing
+* *180,000+ lines of Java* under strict constraints
+* *0 external dependencies*, *0 runtime bytecode manipulation*
+
+== Discover Vidocq
+
+The code, the documentation and the method are available right now on https://codeberg.org/Vidocq[Codeberg^], and the site https://vidocq.dev[vidocq.dev^] gathers everything you need to get started. Remember that Vidocq is in *alpha*: the API and the modules will still evolve, and your feedback is precious to help the project mature. From today you can use it, study it, modify it and redistribute it for your personal and professional projects.
+
+*SCIAM is proud to be a sponsor of Vidocq.* Supporting an open Java runtime, compliant with standards and designed for European sovereignty, means investing in computing that one can understand, audit and control.
+
+And if you want to know how such a demanding stack came to life, from the prototype scribbled at an unconference to the 5,650 tests passing, do not miss the full account of the adventure: link:/posts/the-story-of-vidocq/[the story of Vidocq^].

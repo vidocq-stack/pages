@@ -1,0 +1,80 @@
+---
+layout: main
+---
+{@io.quarkiverse.roq.frontmatter.runtime.model.DocumentPage page}
+{#let author = page.data}
+{#let authorId = page.data._key}
+
+<div class="vid-author-hero">
+  <div class="vid-author-hero-inner">
+    <a href="{site.url('/authors/')}" class="vid-article-back"><i class="fa-solid fa-arrow-left"></i> Authors</a>
+  </div>
+</div>
+
+<div class="vid-author-page">
+
+  <div class="vid-author-profile">
+    <div class="vid-author-avatar">
+      {#if author.avatar??}
+      <img src="{site.image(author.avatar)}" alt="{author.name}"/>
+      {#else}
+      <img src="{site.image('roq-default/default-avatar.svg')}" alt="{author.name}"/>
+      {/if}
+    </div>
+    <div class="vid-author-info">
+      <h1 class="vid-author-name">{author.name}</h1>
+      <p class="vid-author-job">{author.job}</p>
+      {#if author.bio??}
+      <p class="vid-author-bio">{author.bio}</p>
+      {/if}
+      <div class="vid-author-socials">
+        {#if author.twitter??}
+        <a href="https://x.com/{author.twitter}" class="vid-author-social-link" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+          <i class="fa-brands fa-x-twitter"></i>
+        </a>
+        {/if}
+        {#if author.linkedin??}
+        <a href="https://www.linkedin.com/in/{author.linkedin}" class="vid-author-social-link" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+          <i class="fa-brands fa-linkedin"></i>
+        </a>
+        {/if}
+        {#if author.website??}
+        <a href="{author.website}" class="vid-author-social-link" target="_blank" rel="noopener noreferrer" aria-label="Website">
+          <i class="fa-solid fa-globe"></i>
+        </a>
+        {/if}
+        {#if author.codeberg??}
+        <a href="{author.codeberg}" class="vid-author-social-link" target="_blank" rel="noopener noreferrer" aria-label="Codeberg">
+          <i class="fa-solid fa-code-branch"></i>
+        </a>
+        {/if}
+       {#if author.bluesky??}
+       <a href="https://bsky.app/profile/{author.bluesky}" class="vid-author-social-link" target="_blank" rel="noopener noreferrer" aria-label="Bluesky">
+         <i class="fa-brands fa-bluesky"></i>
+       </a>
+       {/if}
+      </div>
+    </div>
+  </div>
+
+  <div class="vid-author-posts">
+    <h2 class="vid-author-posts-title">Posts</h2>
+    <div class="blog-grid">
+      {#for post in site.collections.get('posts')}
+      {#if post.data.author??}
+      {#if post.data.author == authorId}
+      {#roq/postCard post /}
+      {/if}
+      {#else if post.data.authors??}
+      {#if post.data.authors.asStrings.contains(authorId)}
+      {#roq/postCard post /}
+      {/if}
+      {/if}
+      {/for}
+    </div>
+  </div>
+
+</div>
+
+{/let}
+{/let}

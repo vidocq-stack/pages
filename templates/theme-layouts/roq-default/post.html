@@ -56,18 +56,40 @@ asciidoc-attributes:
         </a>
       </div>
     </div>
-    {#if page.data.author??}
+    {#if page.data.authors??}
+    <div class="vid-article-authors">
+      {#for authorId in page.data.authors.asStrings}
+      {#let author=cdi:authors.get(authorId)}
+      {#if author}
+      <div class="vid-article-author">
+        {#if author.avatar??}
+        <img src="{site.image(author.avatar)}" alt="{author.name}"/>
+        {#else}
+        <img src="{site.image('roq-default/default-avatar.svg')}" alt="{author.name}"/>
+        {/if}
+        <div class="vid-article-author-info">
+          <a href="{site.url(author.profile)}" class="vid-article-author-name">{author.name}</a>
+          <span class="vid-article-author-job">{author.job}</span>
+        </div>
+      </div>
+      {/if}
+      {/let}
+      {/for}
+    </div>
+    {#else if page.data.author??}
     {#let author=cdi:authors.get(page.data.author)}
     {#if author}
-    <div class="vid-article-author">
-      {#if author.avatar??}
-      <img src="{site.image(author.avatar)}" alt="{author.name}"/>
-      {#else}
-      <img src="{site.image('roq-default/default-avatar.svg')}" alt="{author.name}"/>
-      {/if}
-      <div class="vid-article-author-info">
-        <a href="{author.profile}" class="vid-article-author-name" target="_blank" rel="noopener noreferrer">{author.name}</a>
-        <span class="vid-article-author-job">{author.job}</span>
+    <div class="vid-article-authors">
+      <div class="vid-article-author">
+        {#if author.avatar??}
+        <img src="{site.image(author.avatar)}" alt="{author.name}"/>
+        {#else}
+        <img src="{site.image('roq-default/default-avatar.svg')}" alt="{author.name}"/>
+        {/if}
+        <div class="vid-article-author-info">
+          <a href="{site.url(author.profile)}" class="vid-article-author-name">{author.name}</a>
+          <span class="vid-article-author-job">{author.job}</span>
+        </div>
       </div>
     </div>
     {/if}

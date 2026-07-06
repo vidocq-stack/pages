@@ -176,9 +176,10 @@ configuration, and wire the other bricks together at startup.
 
 == Dependency Graph
 
-[plantuml, config="plantuml-skin.iuml", format=svg, opts=inline]
+[plantuml, format=svg, opts=inline]
 ....
 @startuml
+include::plantuml-skin.iuml[]
 skinparam nodesep 40
 skinparam ranksep 50
 
