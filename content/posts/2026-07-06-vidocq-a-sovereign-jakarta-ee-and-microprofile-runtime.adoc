@@ -77,4 +77,6 @@ The code, the documentation and the method are available right now on https://co
 
 *SCIAM is proud to be a sponsor of Vidocq.* Supporting an open Java runtime, compliant with standards and designed for European sovereignty, means investing in computing that one can understand, audit and control.
 
+Ready to try it yourself? Follow the link:/posts/how-to-start-your-first-vidocq-app/[How to Start Your First Vidocq App^] tutorial and go from zero to a booted runtime in under ten minutes.
+
 And if you want to know how such a demanding stack came to life, from the prototype scribbled at an unconference to the 5,650 tests passing, do not miss the full account of the adventure: link:/posts/the-story-of-vidocq/[the story of Vidocq^].
