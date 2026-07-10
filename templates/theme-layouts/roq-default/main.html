@@ -52,6 +52,15 @@ layout: default
   </div>
 </footer>
 
+<!-- Self-hosted syntax highlighting (see public/js, public/css). -->
+<link rel="stylesheet" href="{site.url('/css/highlight-github-dark.min.css')}"/>
+<script src="{site.url('/js/highlight.min.js')}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('pre > code').forEach((el) => hljs.highlightElement(el));
+  });
+</script>
+
 <script>
   (() => {
     const header = document.querySelector('[data-mobile-nav]');

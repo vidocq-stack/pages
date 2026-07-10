@@ -11,6 +11,8 @@ image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
 
 Vidocq is a zero-dependency Jakarta EE / MicroProfile runtime for Java 25: JPMS-native, virtual-threads-first, and built on compile-time code generation instead of runtime reflection. The runtime now ships a command-line interface, and this post walks through it end to end: scaffold a new application, boot it, and wire in your first extension — in under ten minutes.
 
+NOTE: *Update 2026-07*: the always-current version of this walkthrough lives in the official documentation — https://doc.vidocq.dev/vidocq/getting-started[Getting started] — and the CLI now installs with a one-liner (below). Thanks to our first external users for the feedback!
+
 == Prerequisites
 
 * **Java 25** (Temurin recommended)
@@ -20,40 +22,21 @@ Every Vidocq repository pins both via `.sdkmanrc`, so `sdk env` inside a checkou
 
 == Install the CLI (from Maven Central)
 
-Vidocq 0.2.0 is published to Maven Central — every brick of the ecosystem, CLI included — so installing it is one dependency resolution away, no checkout required. The CLI is a plain JPMS module (`io.vidocq.runtime.cli`) with zero dependencies beyond the JDK and the runtime core, so "installing" it just means putting it and its runtime closure on a module path. Let Maven collect everything into one directory:
+Every brick of the ecosystem — CLI included — is published to Maven Central, and the CLI ships as a self-contained distribution (a JPMS module path plus launchers). One line installs it:
 
 [source,bash]
 ----
-mkdir -p ~/.vidocq/cli && cd ~/.vidocq/cli
-
-cat > pom.xml <<'EOF'
-<project xmlns="http://maven.apache.org/POM/4.0.0">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>local</groupId>
-    <artifactId>vidocq-cli-install</artifactId>
-    <version>0</version>
-    <dependencies>
-        <dependency>
-            <groupId>io.vidocq.runtime</groupId>
-            <artifactId>vidocq-runtime-cli</artifactId>
-            <version>0.2.0</version>
-        </dependency>
-    </dependencies>
-</project>
-EOF
-
-mvn -q dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=modules
+curl -fsSL https://vidocq.dev/install.sh | sh
 ----
 
-then define a `vidocq` shell function in your `~/.bashrc` or `~/.zshrc`:
+On Windows (PowerShell):
 
-[source,bash]
+[source,powershell]
 ----
-vidocq() {
-  java -p "$HOME/.vidocq/cli/modules" \
-       -m io.vidocq.runtime.cli/io.vidocq.runtime.cli.VidocqCli "$@"
-}
+irm https://vidocq.dev/install.ps1 | iex
 ----
+
+The script resolves the latest release from Central, unpacks it into `~/.vidocq/cli` and puts a `vidocq` launcher on your `PATH`. No Maven involved. Prefer doing it by hand? Grab `vidocq-runtime-cli-<version>-cli.zip` from https://repo1.maven.org/maven2/io/vidocq/runtime/vidocq-runtime-cli/[Central], unzip, and add its `bin/` to your `PATH`.
 
 Tab completion is one line away: `source <(vidocq completion bash)`.
 
