@@ -9,7 +9,8 @@
 #   VIDOCQ_VERSION=0.2.1 curl -fsSL https://vidocq.dev/install.sh | sh   # pin a version
 set -eu
 
-CENTRAL="https://repo1.maven.org/maven2/io/vidocq/runtime/vidocq-runtime-cli"
+# VIDOCQ_CENTRAL override is for testing against a repository mirror.
+CENTRAL="${VIDOCQ_CENTRAL:-https://repo1.maven.org/maven2}/io/vidocq/runtime/vidocq-runtime-cli"
 INSTALL_ROOT="${VIDOCQ_HOME:-$HOME/.vidocq}/cli"
 BIN_DIR="${VIDOCQ_BIN:-$HOME/.local/bin}"
 
