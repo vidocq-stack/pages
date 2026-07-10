@@ -37,7 +37,7 @@ if [ -n "${VIDOCQ_VERSION:-}" ]; then
     VERSION="$VIDOCQ_VERSION"
     say "Using pinned version $VERSION"
 else
-    say "Resolving the latest release from Maven Central…"
+    say "Resolving the latest release from Maven Central..."
     VERSION=$(curl -fsSL --retry 3 "$CENTRAL/maven-metadata.xml" \
         | sed -n 's/.*<release>\(.*\)<\/release>.*/\1/p' | head -n 1)
     [ -n "$VERSION" ] || fail "Could not resolve the latest release from Central metadata."
@@ -53,7 +53,7 @@ if [ -x "$TARGET/bin/vidocq" ]; then
 else
     TMP_ZIP=$(mktemp) || fail "mktemp failed"
     trap 'rm -f "$TMP_ZIP"' EXIT
-    say "Downloading $DIST_URL…"
+    say "Downloading ${DIST_URL}..."
     curl -fSL --retry 3 -o "$TMP_ZIP" "$DIST_URL" \
         || fail "Download failed — the $VERSION distribution zip may not be published yet."
     rm -rf "$TARGET"
