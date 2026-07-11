@@ -182,10 +182,13 @@ vidocq extension add cassini-rest
 
 [source]
 ----
+✔ Wired vidocq-runtime-cassini-rest-extension-codegen  (annotationProcessorPaths)
 ✔ Added cassini-rest  (io.vidocq.runtime.extensions.jakartaee.core:vidocq-runtime-cassini-rest-extension)
 
 ✔ pom.xml updated.
 ----
+
+Since CLI 0.2.2, `extension add` also wires the extension's annotation-processor bundle on the compiler path — the compile-time codegen works immediately on the next build.
 
 From there, a `@Path` resource class is all Cassini needs: its annotation processor generates the dispatch adapters at compile time and wires them through JPMS `provides` clauses — zero runtime reflection, zero `opens`, GraalVM-friendly. The complete walkthrough (REST resource, CDI, H2 persistence, `curl` calls) lives in the https://doc.vidocq.dev[reference documentation]'s getting-started guide, and we won't duplicate it here.
 
