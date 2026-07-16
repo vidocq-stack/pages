@@ -1,0 +1,125 @@
+---
+title: "Using the Vidocq Snapshot Builds"
+description: How to consume the 0.3.0-SNAPSHOT artifacts from the Central Portal snapshots repository — the pom.xml repositories to add, an update policy that will not fight you, and the traps to avoid.
+date: 2026-07-16
+layout: post
+authors: [yannblazart, antoinesabotdurand]
+tags: [maven, snapshots, getting-started, java]
+---
+
+image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+
+Vidocq releases land on Maven Central, but the interesting things often happen *between*
+releases — like the https://vidocq.dev/blog[multi-module Java Modules fix] that ships in
+0.3.0-SNAPSHOT today. Every merge to `main` is deployed by our CI to the **Central Portal
+snapshots repository**, so you can try tomorrow's Vidocq without building anything yourself.
+Here is the complete, copy-pasteable recipe — and the two traps to know about.
+
+== The repositories to add
+
+Snapshot artifacts are *not* served by `repo1.maven.org`. Add the Central Portal snapshots
+repository to your `pom.xml` — twice, because the Vidocq **Maven plugin** also lives there:
+
+[source,xml]
+----
+<repositories>
+    <repository>
+        <id>central-portal-snapshots</id>
+        <name>Central Portal Snapshots</name>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>never</updatePolicy>
+        </snapshots>
+    </repository>
+</repositories>
+<pluginRepositories>
+    <pluginRepository>
+        <id>central-portal-snapshots</id>
+        <name>Central Portal Snapshots</name>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>never</updatePolicy>
+        </snapshots>
+    </pluginRepository>
+</pluginRepositories>
+----
+
+Then point your Vidocq version property at the snapshot:
+
+[source,xml]
+----
+<properties>
+    <vidocq.version>0.3.0-SNAPSHOT</vidocq.version>
+</properties>
+----
+
+If your project cannot inherit `io.vidocq.runtime:vidocq-runtime-parent` (because it already
+has a parent), import it as a BOM instead — every `io.vidocq.*` version then resolves from it:
+
+[source,xml]
+----
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.vidocq.runtime</groupId>
+            <artifactId>vidocq-runtime-parent</artifactId>
+            <version>${vidocq.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+----
+
+== Why `updatePolicy: never`?
+
+This is the part most snapshot recipes get wrong. Maven's default policy for snapshots is
+`daily`: once a day, it silently checks the remote repository and replaces your cached
+snapshot with whatever CI deployed last. That sounds convenient — until the day your build
+behaves differently *overnight* and nothing in your project changed.
+
+With `never`, the snapshot is fetched once and then **you** decide when to move:
+
+[source,bash]
+----
+./mvnw -U clean verify    # -U = deliberately refresh all snapshots, today
+----
+
+One flag, full control, reproducible builds in between. (This is also the setting that keeps
+Maven from overwriting your own `mvn install` of a Vidocq module while you are testing a
+local patch — see trap #2.)
+
+== Trap #1: your IDE caches the resolution
+
+IDEs resolve Maven dependencies themselves and remember *timestamped* snapshot files
+(`vidocq-runtime-core-0.3.0-20260715.122720-22.jar`). After a `-U` refresh — or after our CI
+publishes a new build — force a full Maven reload in the IDE (IntelliJ: *Reload All Maven
+Projects*), otherwise you may keep running a jar that Maven itself no longer selects. When in
+doubt, check the `-p`/`-cp` line at the top of your run console: the file names tell you
+exactly which build you are on.
+
+== Trap #2: never mix `mvn install` and remote snapshots of the same version
+
+If you build a Vidocq module locally (`mvn install` of `0.3.0-SNAPSHOT`) *and* the remote
+snapshot repository is enabled with the default policy, you have two artifacts with the same
+version and different content fighting over your `~/.m2`. The daily check can silently
+replace your local build with the remote one. If you develop against a local patch:
+
+* keep `updatePolicy: never` (as above) and refresh only with an explicit `-U`;
+* or build with `./mvnw -nsu` (no snapshot updates) while your patch is not merged;
+* and when things look impossible, `ls -la ~/.m2/repository/io/vidocq/...` — the file
+  timestamps never lie.
+
+== A word of snapshot hygiene
+
+Snapshots move by definition: what you tested on Monday is not byte-for-byte what you resolve
+on Friday. Perfect for trying a fix or following the development — not for anything you ship.
+Pin your production builds to a released version, and when a snapshot fixes your problem,
+tell us: it is one more reason for us to cut the release.
+
+Happy testing — and if anything in the recipe above does not work for you, open an issue on
+https://codeberg.org/Vidocq/vidocq[Codeberg] or come discuss it on the blog.

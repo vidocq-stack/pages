@@ -1,0 +1,133 @@
+---
+title: "Multi-Module JPMS Apps on Vidocq: One opens, One Split Package, and a Fix"
+description: A user report about a single opens line took us from a JPMS refresher to a split-package bug hiding in our own example — and to a 0.3.0 plugin that now handles cross-module code generation natively.
+date: 2026-07-16
+layout: post
+authors: [yannblazart, antoinesabotdurand]
+tags: [jpms, maven, deep-dive, java]
+---
+
+image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+
+A few days ago, one of our first external users sent us a lovely bug report. They were building a
+small hexagonal application — a domain module, a REST adapter module, both strictly *spec-only*
+(Jakarta EE and MicroProfile APIs, nothing else) — and running it on three different MicroProfile
+runtimes, one of them being Vidocq. Our
+https://doc.vidocq.dev/vidocq/getting-started[getting-started guide] told them to write an
+`opens` line in the module that hosts the main class. Their IDE flagged it: _the package you are
+trying to open does not exist_. It did exist, of course. Just in **another JPMS module**.
+
+That one warning turned out to be the entrance of a rabbit hole worth writing about. Here is the
+whole descent: a JPMS rule, a split package, a jar attribute you have probably never heard of, a
+bug that our own example was silently hiding, and the fix that ships in 0.3.0-SNAPSHOT.
+
+== Rule one: you can only open what you own
+
+JPMS has no syntax for opening someone else's package. An `opens com.acme.rest;` directive in
+module `app.runtimes.vidocq` is meaningless if the package lives in `app.adapters.rest` — only
+the launcher flag `--add-opens` can pierce a module from the outside. So in a multi-module
+application, the getting-started `opens` must move into the module that contains the classes:
+
+[source,java]
+----
+module app.adapters.rest {
+    exports com.acme.rest;          // resource classes
+    exports com.acme.rest.dto;      // JSON-B reads records via public accessors
+    requires jakarta.cdi;
+    requires jakarta.ws.rs;
+
+    // The consuming runtime generates/reflects the CDI plumbing for these beans.
+    opens com.acme.rest;
+}
+----
+
+Note what is *not* there: no Vidocq module, no qualified `opens … to io.vidocq.something`. An
+unqualified `opens` keeps the module 100 % spec-only — and classpath-based runtimes ignore
+`module-info` entirely, so the same jar runs unchanged on the other two runtimes of our user's
+experiment. Decoupling preserved.
+
+The runtime module then declares the app modules as *scanned dependencies*, and
+`vidocq:generate` produces the CDI/REST glue for them at build time:
+
+[source,xml]
+----
+<scanDependencies>
+    <scanDependency>com.acme:rest-adapter</scanDependency>
+    <scanDependency>com.acme:domain</scanDependency>
+</scanDependencies>
+----
+
+So far, so documented. Except…
+
+== Rule two: a package lives in exactly one module
+
+The classes that `vidocq:generate` produces for a scanned bean — client proxies, interceptors —
+are generated *in the package of that bean*, which is a package owned by the dependency's
+module. In 0.2.0 they landed in the consumer's `target/classes`, so the runtime module's jar
+ended up containing packages of two other modules. On the module path, that is an illegal
+**split package**, and the boot layer says so bluntly:
+
+[source]
+----
+java.lang.module.ResolutionException: Module app.runtimes.vidocq contains package
+com.acme.rest, module app.adapters.rest exports package com.acme.rest to app.runtimes.vidocq
+----
+
+Two gotchas made this bug nastier than it looks.
+
+**Gotcha #1 — `ModulePackages`.** Deleting the offending classes from the jar afterwards does
+not help: `maven-jar-plugin` records the package list in the `ModulePackages` attribute of
+`module-info.class` at packaging time. The jar still *claims* the foreign packages, and the
+resolver still refuses to boot. The classes have to leave `target/classes` **before** the jar is
+built.
+
+**Gotcha #2 — the silent variant.** Our own `vidocq-runtime-cassini-rest-example` consumes an
+external REST library through this exact mechanism, and its jlink image *appeared* to work. It
+worked because the example's `module-info` did not `requires` the external module — so the
+resolver never pulled it into the graph, no split package was ever detected… and the external
+resource was simply **absent**: `GET /api/external` answered 404, and
+`dist/bin/java --list-modules` threw a `LayerInstantiationException`. A green build, a booting
+app, and a missing endpoint. The worst kind of bug.
+
+Transparency being part of the Vidocq contract: yes, that was a real bug in 0.2.0, our user's
+report is what led us to it, and the example is fixed on main.
+
+== The fix in 0.3.0-SNAPSHOT: give the classes back to their owner
+
+The principle is simple — generated classes belong to the module that owns their package, so
+ship them *inside that module's jar*:
+
+* `vidocq:generate` now parks cross-module generated classes in
+  `target/vidocq-patches/<artifactId>/` instead of leaving them in `target/classes`
+  (you will see `JPMS: parked N generated class(es) of '…'` in the build log);
+* `vidocq:package` and `vidocq:jlink` copy/stage **enriched** dependency jars that carry their
+  own generated classes — the packages already exist in those jars, so the module descriptor
+  stays exact and there is no split package to reject (`vidocq:jpackage` reuses the jlink
+  image, so it inherits the fix);
+* `vidocq:dev` wires the equivalent `--patch-module` options into the child JVM automatically.
+
+Zero new configuration. The user-facing pom stays exactly what it was:
+`<scanDependencies>` and nothing else. The dist-zip launcher, the jlink image, the jpackage
+app-image, a bare `java --module-path lib -m …`, and dev mode all serve the endpoint — we
+verified each one on the reporter's scenario, on all three of their runtimes.
+
+Still on 0.2.0? The manual recipe (move the generated classes out before `jar`, then launch
+with `--patch-module`) is documented in
+https://doc.vidocq.dev/vidocq/usage.html[Usage — Multi-module applications], next to the 0.3.0
+behaviour.
+
+== What this episode says about JPMS-native
+
+Being JPMS-strict is a core Vidocq constraint, and this bug is a good illustration of what that
+costs and buys. A classpath runtime would never have noticed anything — the classes are all
+there, packages are a fiction, everything "works". The module system, by refusing the split
+package, forced us to put every generated class in the module it belongs to. The result is not
+a workaround; it is a cleaner architecture: dependency jars enriched at build time with exactly
+the code that serves them, main module kept pure, and images that `jlink` accepts without a
+single `--add-opens`.
+
+Thanks again to our reporter for the writeup that started it all — this is precisely why we
+wanted early users. If you are running Vidocq on a multi-module application, update to
+0.3.0-SNAPSHOT (see link:/posts/using-the-vidocq-snapshot-builds/[how to consume the snapshot
+builds]), read the new https://doc.vidocq.dev/vidocq/usage.html[multi-module section], and
+tell us what breaks next.
