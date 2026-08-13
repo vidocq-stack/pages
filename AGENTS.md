@@ -51,17 +51,26 @@ This file defines repository rules for humans and coding agents working on this 
 - Prefer editing content under `content/` in AsciiDoc.
 - Keep structural/template logic in theme/layout files, not in content pages.
 - Use CSS customizations in a maintainable way (small, scoped, and documented changes).
-- **Renaming can break published URLs.** Know which is which before you rename:
-  - Posts under `content/posts/` declare no `slug:` or `permalink:`, so their URL is derived
-    from the **filename** — renaming one moves a page that is already live.
-  - Standalone pages pin their path with a `link:` key (e.g. `link: /contributing/`), so their
-    filename is free to change.
-  - Entries in `tags:` drive the tag page URLs.
-  - AsciiDoc section headings generate the `#anchor` that deep links rely on.
+- **A post's published URL comes from its `title:`, not its filename.** Roq slugifies the title:
+  `content/posts/2026-07-16-multi-module-jpms-apps-on-vidocq.adoc` is published at
+  `/posts/multi-module-jpms-apps-on-vidocq-one-opens-one-split-package-and-a-fix/`. So:
+  - **Renaming a post file is free** — the URL does not follow it.
+  - **Retitling a published post is a breaking change.** Raise it first and pair it with a
+    redirect. The title also appears on the home page, the blog index, the author pages and the
+    prev/next links of neighbouring posts, so it is never a one-page edit.
+- Standalone pages pin their path with a `link:` key (e.g. `link: /contributing/`), so both their
+  filename and their title are free to change.
+- AsciiDoc section headings generate the `#anchor` that deep links rely on. Default Asciidoctor
+  id rules apply here — `== What this episode says` becomes `#_what_this_episode_says`, with a
+  leading underscore and underscores as separators.
+- **Verify against a real build before trusting any of the above.** Absence of a `slug:` or
+  `permalink:` key does *not* imply filename-derived URLs — that assumption was wrong once
+  already. Build and inspect `target/roq/`:
 
-  Treat all four as breaking changes: raise them before making them, and pair them with a
-  redirect. Editing a published post also means its `title:` and `description:` have already
-  gone out in the RSS feed.
+  ```
+  ./mvnw package -ntp -DskipTests -Dquarkus.roq.generator.batch=true
+  java -jar target/quarkus-app/quarkus-run.jar
+  ```
 
 ## Pull Request Checklist
 
@@ -69,7 +78,8 @@ Before submitting a change, verify:
 
 - [ ] Content is in English.
 - [ ] Terminology says "Java Modules", never "JPMS" (except in verbatim tool output).
-- [ ] No published URL or anchor changed without a heads-up and a redirect.
+- [ ] No published post retitled and no anchor renamed without a heads-up and a redirect
+      (a post's URL follows its `title:`).
 - [ ] Content uses AsciiDoc (or includes a clear reason for necessary HTML).
 - [ ] UI remains responsive on mobile, tablet, and desktop.
 - [ ] Design stays modern, simple, and readable.
