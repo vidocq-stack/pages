@@ -34,17 +34,42 @@ This file defines repository rules for humans and coding agents working on this 
    - All user-facing content must be written in English.
    - Keep wording clear, concise, and consistent in tone.
 
+6. **Terminology: "Java Modules", never "JPMS"**
+   - Write **Java Modules** for the platform module system, and **a Java module** for a single one.
+   - Never use the abbreviation *JPMS* — not in prose, not in headings, not in identifiers.
+   - Phrasings already established across the ecosystem: `Java Modules-native`,
+     `Strict Java Modules`, `a proper Java module`.
+   - Watch for wording that becomes redundant after the swap: *"Strict JPMS module isolation"*
+     must become *"Strict Java Modules isolation"*, not *"Java Modules module isolation"*.
+   - **One exception**: text that quotes tool output verbatim (build logs, error messages,
+     compiler warnings). The quote must keep matching what the tool actually prints. Change the
+     tool first, then the quote — never the other way round.
+   - This is an ecosystem-wide convention, not a rule local to this site.
+
 ## Content and Layout Guidelines
 
 - Prefer editing content under `content/` in AsciiDoc.
 - Keep structural/template logic in theme/layout files, not in content pages.
 - Use CSS customizations in a maintainable way (small, scoped, and documented changes).
+- **Renaming can break published URLs.** Know which is which before you rename:
+  - Posts under `content/posts/` declare no `slug:` or `permalink:`, so their URL is derived
+    from the **filename** — renaming one moves a page that is already live.
+  - Standalone pages pin their path with a `link:` key (e.g. `link: /contributing/`), so their
+    filename is free to change.
+  - Entries in `tags:` drive the tag page URLs.
+  - AsciiDoc section headings generate the `#anchor` that deep links rely on.
+
+  Treat all four as breaking changes: raise them before making them, and pair them with a
+  redirect. Editing a published post also means its `title:` and `description:` have already
+  gone out in the RSS feed.
 
 ## Pull Request Checklist
 
 Before submitting a change, verify:
 
 - [ ] Content is in English.
+- [ ] Terminology says "Java Modules", never "JPMS" (except in verbatim tool output).
+- [ ] No published URL or anchor changed without a heads-up and a redirect.
 - [ ] Content uses AsciiDoc (or includes a clear reason for necessary HTML).
 - [ ] UI remains responsive on mobile, tablet, and desktop.
 - [ ] Design stays modern, simple, and readable.
