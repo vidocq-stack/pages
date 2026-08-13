@@ -1,6 +1,6 @@
 ---
 title: Vidocq
-description: A modular MicroProfile runtime for Java 25 with AI-augmented development — JPMS-native, virtual-thread-first, zero external dependencies.
+description: A modular MicroProfile runtime for Java 25 with AI-augmented development — Java Modules-native, virtual-thread-first, zero external dependencies.
 layout: home
 link: /
 name: Vidocq
@@ -19,7 +19,7 @@ theme-color: "#0f172a"
       <p class="vid-subtitle">
         A <strong>100% sovereign European stack</strong> — zero external dependencies,
         zero inherited CVEs, full technological independence.
-        Strict JPMS module isolation closes the door on reflection attacks and classpath pollution,
+        Strict Java Modules isolation closes the door on reflection attacks and classpath pollution,
         making Vidocq the first Java framework that is <strong>jlink-</strong> and <strong>jpackage-ready</strong> out of the box.
       </p>
       <div class="vid-actions">
@@ -50,7 +50,7 @@ theme-color: "#0f172a"
   <div class="roq-features vid-features">
     <div class="card card-highlighted roq-feature vid-card">
       <div class="roq-feature-icon"><i class="fa-solid fa-layer-group"></i></div>
-      <h3>JPMS-native</h3>
+      <h3>Java Modules-native</h3>
       <p>Every module ships a <code>module-info.java</code>. Minimal exports, no unjustified <code>opens</code>, no classpath fallback, no split packages.</p>
     </div>
     <div class="card roq-feature vid-card">
@@ -92,7 +92,7 @@ theme-color: "#0f172a"
       <div class="card card-highlighted roq-feature vid-card">
         <div class="roq-feature-icon"><i class="fa-solid fa-lock"></i></div>
         <h3>Secured JARs (<code>.sjar</code>)</h3>
-        <p>JPMS archives encrypted with <strong>AES-256</strong>. The exposed surface — public API and SPI packages — stays in the clear so consumers compile and link normally; everything else is ciphered at rest, protecting your intellectual property and shrinking the attack surface.</p>
+        <p>Java module archives encrypted with <strong>AES-256</strong>. The exposed surface — public API and SPI packages — stays in the clear so consumers compile and link normally; everything else is ciphered at rest, protecting your intellectual property and shrinking the attack surface.</p>
       </div>
       <div class="card roq-feature vid-card">
         <div class="roq-feature-icon"><i class="fa-solid fa-puzzle-piece"></i></div>
@@ -244,7 +244,7 @@ theme-color: "#0f172a"
       <div class="vid-bottom-card-icon"><i class="fa-solid fa-code-pull-request"></i></div>
       <h2>Get involved</h2>
       <p>Contributions are welcome at every layer — from TCK coverage to implementing a new MicroProfile specification.</p>
-      <p>The contributing guide covers prerequisites (Java 25, Maven 4, SDKMAN), JPMS conventions, the zero-deps rule, virtual-thread patterns, and the PR workflow.</p>
+      <p>The contributing guide covers prerequisites (Java 25, Maven 4, SDKMAN), Java Modules conventions, the zero-deps rule, virtual-thread patterns, and the PR workflow.</p>
       <a href="/contributing/" class="btn btn-primary vid-bottom-btn">
         <i class="fa-solid fa-code-pull-request"></i> Contributing guide
       </a>

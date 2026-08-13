@@ -60,7 +60,7 @@ Vidocq tackles the problem at the root with a radical rule: *zero external depen
 
 * *No third-party library*: no Netty, no Jetty, no ASM, no Byte Buddy. No inherited CVE.
 * *No runtime bytecode manipulation*: no dynamic proxy, no agent, no `setAccessible(true)` in production. All the "magic" is generated at compile time via the https://openjdk.org/jeps/484[Class-File API^] of JDK 25.
-* *Strict JPMS, AOT-compatible*: isolated modules, minimal exports, compatible with GraalVM and Leyden CDS.
+* *Strict Java Modules, AOT-compatible*: isolated modules, minimal exports, compatible with GraalVM and Leyden CDS.
 
 The result: a software supply chain reduced to its simplest expression, auditable end to end, and a native startup with no surprises.
 

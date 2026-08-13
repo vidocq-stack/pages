@@ -54,7 +54,7 @@ Where other implementations such as Weld (Red Hat) or ArC (Quarkus) rely on byte
 * *Zero external dependencies*: no third-party framework, only the relevant Jakarta/MicroProfile APIs
 * *No runtime bytecode manipulation*: no dynamic proxies, no agents, no `setAccessible(true)` in production
 * *Static generation at compile time*: all the CDI "magic" (factories, proxies, interceptors) produced by the https://openjdk.org/jeps/484[Class-File API^] of JDK 25 and APT
-* *Strict JPMS*: each module has its own `module-info.java`, exports kept to a minimum
+* *Strict Java Modules*: each module has its own `module-info.java`, exports kept to a minimum
 * *Virtual Threads* everywhere for I/O
 * *AOT-compatible*: the result must run under GraalVM and Leyden CDS
 

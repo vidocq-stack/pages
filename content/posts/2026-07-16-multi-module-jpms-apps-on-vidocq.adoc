@@ -15,15 +15,15 @@ small hexagonal application — a domain module, a REST adapter module, both str
 runtimes, one of them being Vidocq. Our
 https://doc.vidocq.dev/vidocq/getting-started[getting-started guide] told them to write an
 `opens` line in the module that hosts the main class. Their IDE flagged it: _the package you are
-trying to open does not exist_. It did exist, of course. Just in **another JPMS module**.
+trying to open does not exist_. It did exist, of course. Just in **another Java module**.
 
 That one warning turned out to be the entrance of a rabbit hole worth writing about. Here is the
-whole descent: a JPMS rule, a split package, a jar attribute you have probably never heard of, a
+whole descent: a Java Modules rule, a split package, a jar attribute you have probably never heard of, a
 bug that our own example was silently hiding, and the fix that ships in 0.3.0-SNAPSHOT.
 
 == Rule one: you can only open what you own
 
-JPMS has no syntax for opening someone else's package. An `opens com.acme.rest;` directive in
+Java Modules has no syntax for opening someone else's package. An `opens com.acme.rest;` directive in
 module `app.runtimes.vidocq` is meaningless if the package lives in `app.adapters.rest` — only
 the launcher flag `--add-opens` can pierce a module from the outside. So in a multi-module
 application, the getting-started `opens` must move into the module that contains the classes:
@@ -118,7 +118,7 @@ behaviour.
 
 == What this episode says about JPMS-native
 
-Being JPMS-strict is a core Vidocq constraint, and this bug is a good illustration of what that
+Being strict about Java Modules is a core Vidocq constraint, and this bug is a good illustration of what that
 costs and buys. A classpath runtime would never have noticed anything — the classes are all
 there, packages are a fiction, everything "works". The module system, by refusing the split
 package, forced us to put every generated class in the module it belongs to. The result is not

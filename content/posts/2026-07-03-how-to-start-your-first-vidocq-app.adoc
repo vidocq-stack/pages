@@ -9,7 +9,7 @@ tags: [tutorial, cli, getting-started, java]
 
 image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
 
-Vidocq is a zero-dependency Jakarta EE / MicroProfile runtime for Java 25: JPMS-native, virtual-threads-first, and built on compile-time code generation instead of runtime reflection. The runtime now ships a command-line interface, and this post walks through it end to end: scaffold a new application, boot it, and wire in your first extension — in under ten minutes.
+Vidocq is a zero-dependency Jakarta EE / MicroProfile runtime for Java 25: Java Modules-native, virtual-threads-first, and built on compile-time code generation instead of runtime reflection. The runtime now ships a command-line interface, and this post walks through it end to end: scaffold a new application, boot it, and wire in your first extension — in under ten minutes.
 
 NOTE: *Update 2026-07*: the always-current version of this walkthrough lives in the official documentation — https://doc.vidocq.dev/vidocq/getting-started[Getting started] — and the CLI now installs with a one-liner (below). Thanks to our first external users for the feedback!
 
@@ -22,7 +22,7 @@ Every Vidocq repository pins both via `.sdkmanrc`, so `sdk env` inside a checkou
 
 == Install the CLI (from Maven Central)
 
-Every brick of the ecosystem — CLI included — is published to Maven Central, and the CLI ships as a self-contained distribution (a JPMS module path plus launchers). One line installs it:
+Every brick of the ecosystem — CLI included — is published to Maven Central, and the CLI ships as a self-contained distribution (a Java module path plus launchers). One line installs it:
 
 [source,bash]
 ----
@@ -190,7 +190,7 @@ vidocq extension add cassini-rest
 
 Since CLI 0.2.2, `extension add` also wires the extension's annotation-processor bundle on the compiler path — the compile-time codegen works immediately on the next build.
 
-From there, a `@Path` resource class is all Cassini needs: its annotation processor generates the dispatch adapters at compile time and wires them through JPMS `provides` clauses — zero runtime reflection, zero `opens`, GraalVM-friendly. The complete walkthrough (REST resource, CDI, H2 persistence, `curl` calls) lives in the https://doc.vidocq.dev[reference documentation]'s getting-started guide, and we won't duplicate it here.
+From there, a `@Path` resource class is all Cassini needs: its annotation processor generates the dispatch adapters at compile time and wires them through Java Modules `provides` clauses — zero runtime reflection, zero `opens`, GraalVM-friendly. The complete walkthrough (REST resource, CDI, H2 persistence, `curl` calls) lives in the https://doc.vidocq.dev[reference documentation]'s getting-started guide, and we won't duplicate it here.
 
 == Package it
 

@@ -86,7 +86,7 @@ fraction of the idle memory footprint.
 
 === `vauban` — CDI Container
 
-CDI 4.1 Lite container, fully JPMS-native.
+CDI 4.1 Lite container, fully Java Modules-native.
 Uses the Class-File API and APT processors to generate bean metadata at compile time —
 no runtime scanning, no reflection.
 
@@ -162,7 +162,7 @@ Two database dialects are supported out of the box: **H2** and **PostgreSQL**.
 Jakarta Persistence 3.2 support is planned for a future milestone.
 
 The H2 integration also showcases Vidocq's JAR-enrichment capability: a dedicated **H2 extension**
-repackages the upstream H2 driver as a proper **JPMS module** — adding a `module-info` and clean
+repackages the upstream H2 driver as a proper **Java module** — adding a `module-info` and clean
 exports to a library that ships only as a classpath JAR — so it fits the strict module graph
 without `--add-opens` or automatic-module fallbacks.
 
