@@ -7,7 +7,7 @@ authors: [yannblazart, antoinesabotdurand]
 tags: [forge, forgejo, migration, ci, infrastructure]
 ---
 
-image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+image::/images/posts/2026-08-23-banner2.jpeg[The code flow from Codeberg to Codefloe,role=blog-banner]
 
 Vidocq just moved house for the second time in four months. In May our self-hosted
 Forgejo died with the machine it lived on, and https://codeberg.org[Codeberg] gave the
