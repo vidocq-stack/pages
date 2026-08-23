@@ -15,8 +15,6 @@ project a home within days -- 29 repositories, CI, mirrors, the lot. Today the w
 ecosystem lives on https://codefloe.com[Codefloe], a managed Forgejo instance, and this
 post is both the story of that day and the field guide we wish we had found beforehand.
 
-image::/images/posts/moving-to-codefloe.svg[The Vidocq detective wheels his repository crates from the mountain onto the ice floe -- goodbye mountain, hello floe]
-
 == Why we moved
 
 Codeberg has taken the position that projects built with AI assistance do not belong on
