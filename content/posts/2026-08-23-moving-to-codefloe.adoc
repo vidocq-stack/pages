@@ -126,6 +126,63 @@ javadoc jar failing on a module that no longer has public classes, red on `main`
 month. Re-running every pipeline on fresh infrastructure is the best audit you will
 ever get for free.
 
+== Repointing every clone
+
+The forge moves; your checkouts don't. If you have Vidocq clones (or are migrating your
+own org), three commands cover it. Once per machine, trust the new host and make sure
+your SSH key is registered on it:
+
+[source,shell]
+----
+ssh-keyscan codefloe.com >> ~/.ssh/known_hosts
+----
+
+Then either repoint each clone explicitly:
+
+[source,shell]
+----
+git remote set-url origin git@codefloe.com:Vidocq/<repo>.git
+----
+
+or, for a whole workspace of clones, let a loop do it:
+
+[source,shell]
+----
+for d in */; do
+  old=$(git -C "$d" remote get-url origin 2>/dev/null) || continue
+  git -C "$d" remote set-url origin "${old/codeberg.org/codefloe.com}"
+done
+----
+
+On Windows the same two steps in PowerShell (the bundled OpenSSH client provides
+`ssh-keyscan`):
+
+[source,powershell]
+----
+ssh-keyscan codefloe.com | Add-Content "$env:USERPROFILE\.ssh\known_hosts"
+
+Get-ChildItem -Directory | ForEach-Object {
+  $old = git -C $_.FullName remote get-url origin 2>$null
+  if ($old) {
+    git -C $_.FullName remote set-url origin ($old -replace 'codeberg\.org', 'codefloe.com')
+  }
+}
+----
+
+There is also a zero-touch option: a scoped `insteadOf` rule rewrites the old URLs on
+the fly for every clone on the machine, without editing any of them -- scoped to the
+organizations so the rest of your Codeberg usage is untouched:
+
+[source,shell]
+----
+git config --global url."git@codefloe.com:Vidocq/".insteadOf "git@codeberg.org:Vidocq/"
+git config --global url."https://codefloe.com/Vidocq/".insteadOf "https://codeberg.org/Vidocq/"
+----
+
+And for people who arrive at the old address with no idea a move happened, every
+archived repository on Codeberg now carries a *"moved to codefloe.com"* pointer in its
+description.
+
 == Did it actually work?
 
 Three proofs, because a green job proves less than you think:
