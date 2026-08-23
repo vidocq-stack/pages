@@ -1,13 +1,13 @@
 ---
 title: Projects
-description: All fifteen Vidocq sub-projects, their scope, and how they fit together.
+description: All sixteen Vidocq sub-projects, their scope, and how they fit together.
 layout: page
 link: /projects/
 ---
 
 = Vidocq Projects
 
-Vidocq is a workspace of fifteen independent Maven projects.
+Vidocq is a workspace of sixteen independent Maven projects.
 Each one implements exactly one Jakarta or MicroProfile specification — or one foundational concern — and
 publishes its own artifact to Maven Central on its own schedule.
 
@@ -61,6 +61,9 @@ Projects with more than one official suite list each suite separately.
 
 | `mansart`
 | Jakarta Data 1.0 — 74/74 tests passed (100%). Jakarta Transactions 2.0 — smoke suite 5/5 passed (100%).
+
+| `erasmus`
+| Jakarta Validation 3.1 — in development; official TCK run planned (M8).
 
 | `chappe`
 | Not applicable — transport project, not a spec implementation.
@@ -166,6 +169,14 @@ repackages the upstream H2 driver as a proper **JPMS module** — adding a `modu
 exports to a library that ships only as a classpath JAR — so it fits the strict module graph
 without `--add-opens` or automatic-module fallbacks.
 
+=== `erasmus` — Jakarta Validation 3.1
+
+The newest brick, **in development and not released yet**: a Bean Validation engine with zero
+third-party dependency (only the spec jar — no Hibernate Validator, no external Expression
+Language). The bootstrap, the 21 built-in constraints, custom and composed constraints and
+message interpolation work today; cascading, value extractors, executable validation, APT
+code generation and the official TCK are the next milestones.
+
 == Orchestrator
 
 === `vidocq` — Vidocq-MPS
@@ -205,8 +216,9 @@ package "MicroProfile" {
   [knock]      <<Health 4.0>>          #f0f4ff
 }
 
-package "Persistence" {
+package "Persistence & Validation" {
   [mansart] <<Data 1.0 · Tx 2.0>> #fefce8
+  [erasmus] <<Validation 3.1 · in dev>> #fefce8
 }
 
 package "Orchestrator" {
