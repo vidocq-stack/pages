@@ -48,6 +48,11 @@ layout: main
           <i class="fa-solid fa-code-branch"></i>
         </a>
         {/if}
+        {#if author.git??}
+        <a href="{author.git}" class="vid-author-social-link" target="_blank" rel="noopener noreferrer" aria-label="Source code">
+          <i class="fa-solid fa-code-branch"></i>
+        </a>
+        {/if}
        {#if author.bluesky??}
        <a href="https://bsky.app/profile/{author.bluesky}" class="vid-author-social-link" target="_blank" rel="noopener noreferrer" aria-label="Bluesky">
          <i class="fa-brands fa-bluesky"></i>

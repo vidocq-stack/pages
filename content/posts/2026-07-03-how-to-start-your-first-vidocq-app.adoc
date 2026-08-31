@@ -207,4 +207,4 @@ vidocq build docker     # Dockerfile around the jlink image
 
 * The https://doc.vidocq.dev[reference documentation] — the full REST + persistence getting-started guide and the complete CLI user guide.
 * link:/posts/why-vidocq-is-built-as-independent-bricks/[Why Vidocq is built as independent bricks] — the architecture rationale behind the extension catalog you just used.
-* link:/contributing/[Contributing] — the ecosystem is young and moving fast; issues and PRs are welcome on https://codeberg.org/Vidocq[Codeberg].
+* link:/contributing/[Contributing] — the ecosystem is young and moving fast; issues and PRs are welcome on https://codefloe.com/Vidocq[Codefloe].

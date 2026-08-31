@@ -81,5 +81,5 @@ before the certifying run:
   Injection, JSON-P, JSON-B).
 
 Full process, TCK binary references and detailed results:
-https://codeberg.org/Vidocq/vidocq/src/branch/main/CERTIFICATION.md[`CERTIFICATION.md`]
+https://codefloe.com/Vidocq/vidocq/src/branch/main/CERTIFICATION.md[`CERTIFICATION.md`]
 in the `vidocq` repository.

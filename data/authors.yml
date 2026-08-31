@@ -5,7 +5,7 @@ vidocq-team:
   profile: /authors/vidocq-team/
   avatar: authors/vidocq-logo.png
   bio: The team behind the Vidocq runtime — building a complete, dependency-free implementation of Jakarta EE Core Profile and MicroProfile in pure Java, validated by 5,650 official TCK tests.
-  codeberg: https://codeberg.org/Vidocq
+  git: https://codefloe.com/Vidocq
 
 antoinesabotdurand:
   name: Antoine Sabot-Durand

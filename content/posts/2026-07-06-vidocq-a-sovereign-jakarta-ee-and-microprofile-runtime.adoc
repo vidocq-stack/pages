@@ -11,7 +11,7 @@ image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
 
 Today, we deliver *Vidocq* to the community: a complete and self-contained implementation of the *Jakarta EE Core Profile* and *MicroProfile*, written entirely in Java, *without a single external dependency*, and validated by *5,650 official TCK tests*.
 
-Vidocq is available right now as open source on https://codeberg.org/Vidocq[Codeberg^], under a triple license: EUPL 1.2, EPL 2 and GPL 2.0. The project is still in *alpha*: everything is documented and explored on https://vidocq.dev[vidocq.dev^].
+Vidocq is available right now as open source on https://codefloe.com/Vidocq[Codefloe^], under a triple license: EUPL 1.2, EPL 2 and GPL 2.0. The project is still in *alpha*: everything is documented and explored on https://vidocq.dev[vidocq.dev^].
 
 == Why Vidocq matters
 
@@ -19,7 +19,7 @@ Three convictions guided this project, and they can be read right down to its co
 
 === Sovereignty: a European stack, right down to the names
 
-Vidocq is not just a runtime: it is a manifesto for European, open and self-controlled computing. The project is hosted on https://codeberg.org/Vidocq[Codeberg^], a European non-profit forge, and published under open licenses including the EUPL, the European Union Public Licence.
+Vidocq is not just a runtime: it is a manifesto for European, open and self-controlled computing. The project is hosted on https://codefloe.com/Vidocq[Codefloe^], a self-hosted Forgejo instance, and published under open licenses including the EUPL, the European Union Public Licence.
 
 This heritage shows even in the code names of the modules, which pay tribute to figures of European scientific and cultural heritage. *Vauban*, the engineer of Louis XIV's fortifications, gives his name to the CDI container, solid and flawless. *Chappe*, inventor of the optical telegraph, names the HTTP server written from scratch. *Cassini* (REST), *Champollion* (JSON), *Ravel* (Config), *Cervantes* (JWT), *Cyrano* (Rest Client) and *Humboldt* (Telemetry) extend this gallery. And at the top, *Vidocq*, the first director of the Sûreté nationale, who knows the specifications from the inside in order to honor them better.
 
@@ -73,7 +73,7 @@ The result: a software supply chain reduced to its simplest expression, auditabl
 
 == Discover Vidocq
 
-The code, the documentation and the method are available right now on https://codeberg.org/Vidocq[Codeberg^], and the site https://vidocq.dev[vidocq.dev^] gathers everything you need to get started. Remember that Vidocq is in *alpha*: the API and the modules will still evolve, and your feedback is precious to help the project mature. From today you can use it, study it, modify it and redistribute it for your personal and professional projects.
+The code, the documentation and the method are available right now on https://codefloe.com/Vidocq[Codefloe^], and the site https://vidocq.dev[vidocq.dev^] gathers everything you need to get started. Remember that Vidocq is in *alpha*: the API and the modules will still evolve, and your feedback is precious to help the project mature. From today you can use it, study it, modify it and redistribute it for your personal and professional projects.
 
 *SCIAM is proud to be a sponsor of Vidocq.* Supporting an open Java runtime, compliant with standards and designed for European sovereignty, means investing in computing that one can understand, audit and control.
 

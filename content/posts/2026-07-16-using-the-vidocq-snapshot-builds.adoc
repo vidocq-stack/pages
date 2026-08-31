@@ -122,4 +122,4 @@ Pin your production builds to a released version, and when a snapshot fixes your
 tell us: it is one more reason for us to cut the release.
 
 Happy testing — and if anything in the recipe above does not work for you, open an issue on
-https://codeberg.org/Vidocq/vidocq[Codeberg] or come discuss it on the blog.
+https://codefloe.com/Vidocq/vidocq[Codefloe] or come discuss it on the blog.

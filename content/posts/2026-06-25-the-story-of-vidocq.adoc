@@ -308,6 +308,6 @@ A roadmap is being built for the next Jakarta EE and MicroProfile specifications
 Your ideas and contributions are welcome to feed these discussions and their future implementations.
 An opportunity for you to get started with augmented development?
 
-The code is available on https://codeberg.org/Vidocq[Codeberg^]. The method is documented and reusable to develop other bricks.
+The code is available on https://codefloe.com/Vidocq[Codefloe^]. The method is documented and reusable to develop other bricks.
 
 Welcome to Vidocq!

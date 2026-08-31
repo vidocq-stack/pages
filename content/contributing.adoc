@@ -11,7 +11,7 @@ Vidocq welcomes contributions at every layer of the stack: bug reports,
 TCK coverage improvements, new specification implementations,
 performance work, and documentation.
 
-The source code is hosted under the https://codeberg.org/Vidocq[Vidocq organisation on Codeberg].
+The source code is hosted under the https://codefloe.com/Vidocq[Vidocq organisation on Codefloe].
 Each specification implementation lives in its own repository.
 
 == Before You Start
@@ -31,7 +31,7 @@ If you are new to GPG:
 * https://www.gnupg.org/gph/en/manual.html[The GNU Privacy Guard handbook]
 * https://gpgtools.org/[GPG Suite] (macOS) or https://www.openpgp.org/software/kleopatra/[Kleopatra] (Windows/Linux)
 
-Generate a key, configure Git to sign all commits, and add your public key to your Codeberg account:
+Generate a key, configure Git to sign all commits, and add your public key to your Codefloe account:
 
 [source,bash]
 ----
@@ -57,7 +57,7 @@ git config --global tag.gpgsign true
 git config --local format.signoff true
 ----
 
-Export your public key and add it under *Settings → SSH/GPG Keys* in your Codeberg profile:
+Export your public key and add it under *Settings → SSH/GPG Keys* in your Codefloe profile:
 
 [source,bash]
 ----
@@ -77,10 +77,10 @@ SPDX-License-Identifier: EPL-2.0 OR EUPL-1.2 OR GPL-2.0-or-later
 ----
 
 To sign the CLA, open a *dedicated pull request* (separate from your first code contribution)
-against the https://codeberg.org/Vidocq/governance[Vidocq governance repository]:
+against the https://codefloe.com/Vidocq/governance[Vidocq governance repository]:
 
-. Read https://codeberg.org/Vidocq/governance/src/branch/main/CLA.md[CLA.md] carefully.
-. Add a row with your full name, Codeberg username, and today's date
+. Read https://codefloe.com/Vidocq/governance/src/branch/main/CLA.md[CLA.md] carefully.
+. Add a row with your full name, Codefloe username, and today's date
   to `CLA-signatures/individuals.md`.
 . Add your exported GPG public key as `.forgejo/keys/<your-username>.asc`
   (this file enables automated signature verification on future pull requests).
@@ -168,7 +168,7 @@ champollion/run-official-tck-jsonp-2.1.sh
 
 == Submitting a Contribution
 
-. Fork the relevant repository on https://codeberg.org/Vidocq[Codeberg].
+. Fork the relevant repository on https://codefloe.com/Vidocq[Codefloe].
 . Create a feature branch from `main`:
 +
 [source,bash]
