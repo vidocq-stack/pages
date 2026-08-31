@@ -1,0 +1,85 @@
+---
+title: Certification
+description: Vidocq's Jakarta EE Core Profile 11 compatibility results — TCK versions, results and evidence.
+layout: page
+link: /certification/
+---
+
+= Jakarta EE Certification
+
+Vidocq claims compatibility with **Jakarta EE Core Profile 11**, verified against
+the official Eclipse Foundation TCK (EFTL) binaries.
+
+== Vidocq Runtime 0.3.0 — Jakarta EE Core Profile 11
+
+[cols="1,3"]
+|===
+| Product            | Vidocq Runtime 0.3.0
+| Specification      | Jakarta EE Core Profile 11
+| TCK                 | `jakarta-core-profile-tck-11.0.0` (SHA-256 `0357bfab7025972edb2bf50277b6b4206b499a2961bc94e783f34782cc4a9bda`)
+| JDK                 | Temurin 25.0.4+7-LTS
+| OS                  | macOS 27.0 (26A5421a), Apple M5
+| Certifying run date | 2026-08-31, against the released 0.3.0 Maven Central artifacts (`io.vidocq.{vauban,champollion,cassini,chappe}:*:0.3.0`)
+|===
+
+=== Core Profile composite TCK
+
+10/13 passed. The 3 not passing are unreachable on any JDK 25 implementation
+regardless of conformance — a Jakarta TCK-helper incompatibility with the
+documented `StackWalker` contract (`Utils.getDescriptor()` called without
+`Option.RETAIN_CLASS_REFERENCE`), **not a Vidocq defect**. The challenge was
+filed and is **accepted** by the TCK project:
+https://github.com/jakartaee/platform-tck/issues/2730[`jakartaee/platform-tck#2730`].
+The fix already exists upstream (merged January 2025) but has not yet shipped
+in an official Core Profile TCK release.
+
+=== Constituent specification TCKs
+
+[cols="2,3"]
+|===
+| Specification | Result
+
+| Jakarta Annotations 3.0
+| 1/1 passed
+
+| Jakarta Contexts and Dependency Injection (Lite) 4.1 + Interceptors 2.2
+| 774/774 passed
+
+| Jakarta Dependency Injection 2.0
+| pass (`jakarta.inject-tck` 2.0.2)
+
+| Jakarta JSON Processing 2.1
+| 179/179 (api) + 18/18 (pluggability) passed, TCK 2.1.1, 0 failures
+
+| Jakarta JSON Binding 3.0
+| 295 run, 0 failures, 5 skipped
+
+| Jakarta RESTful Web Services 4.0
+| 2670 run, 0 failures, 131 skipped
+|===
+
+Jakarta Interceptors 2.2 has no standalone TCK — it is covered by the CDI TCK
+above.
+
+=== Signature tests
+
+All five constituent signature-test requirements are satisfied: Annotations,
+JSON-P, JSON-B, RESTful WS, and CDI 4.1 Lite (`cdi-sigtest`, 0 failures against
+`cdi-api-jdk17.sig`). There is no profile-level signature test — the Core
+Profile TCK defers to each constituent specification's own signature test.
+
+=== Verification method
+
+All 7 EFTL binaries downloaded fresh from `download.eclipse.org` and verified
+before the certifying run:
+
+* **SHA-256**: 7/7 match.
+* **GPG signature**: 7/7 valid — 2 signed by the current Jakarta EE
+  Specification Committee key (`4C0C9898D7A2A593`: Core Profile 11, RESTful WS
+  4.0.1), 5 by the previous committee key (`ABE05725E77C2B44`, since expired —
+  expected for their earlier release dates: Annotations, CDI, Dependency
+  Injection, JSON-P, JSON-B).
+
+Full process, TCK binary references and detailed results:
+https://codeberg.org/Vidocq/vidocq/src/branch/main/CERTIFICATION.md[`CERTIFICATION.md`]
+in the `vidocq` repository.

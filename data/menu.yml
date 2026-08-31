@@ -11,6 +11,9 @@ items:
   - title: Contributing
     path: /contributing/
     icon: fa-solid fa-code-pull-request
+  - title: Certification
+    path: /certification/
+    icon: fa-solid fa-certificate
   - title: Documentation
     path: https://doc.vidocq.dev
     icon: fa-solid fa-book
