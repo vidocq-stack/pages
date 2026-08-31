@@ -7,7 +7,7 @@ authors: [yannblazart, antoinesabotdurand]
 tags: [release, jakarta-ee, microprofile, tck, certification]
 ---
 
-// TODO: banner image — image::/images/posts/2026-08-31-banner.jpeg[Vidocq 0.3.0,role=blog-banner]
+image::/images/posts/2026-08-31-banner.jpeg[Viduke conjures the sparkling 0.3.0 over the Paris rooftops,role=blog-banner]
 
 Vidocq 0.3.0 shipped this weekend. All sixteen families are tagged and on
 https://central.sonatype.com/namespace/io.vidocq[Maven Central], the
