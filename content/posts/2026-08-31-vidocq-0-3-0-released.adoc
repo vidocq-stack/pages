@@ -1,0 +1,97 @@
+---
+title: "Vidocq 0.3.0 Is Out — and Jakarta EE Core Profile 11 Certification Is on the Way"
+description: The third release train ships all sixteen families to Maven Central, with 1868 MicroProfile 7.1 TCK tests green on the assembled runtime and Core Profile 11 certification in preparation.
+date: 2026-08-31
+layout: post
+authors: [yannblazart, antoinesabotdurand]
+tags: [release, jakarta-ee, microprofile, tck, certification]
+---
+
+// TODO: banner image — image::/images/posts/2026-08-31-banner.jpeg[Vidocq 0.3.0,role=blog-banner]
+
+Vidocq 0.3.0 shipped this weekend. All sixteen families are tagged and on
+https://central.sonatype.com/namespace/io.vidocq[Maven Central], the
+https://doc.vidocq.dev[documentation site] now serves the 0.3.0 line by default
+(with a version picker covering 0.2.0 and the new `dev` line), and every
+repository carries a proper
+https://codefloe.com/Vidocq/vidocq/releases/tag/v0.3.0[release page] linking
+artifacts and docs. Still an alpha — but a rather well-tested one.
+
+== Certification: Jakarta EE Core Profile 11 on the way
+
+The headline of this cycle is conformance work, and the numbers speak for
+themselves:
+
+* *MicroProfile 7.1: 1868 official TCK tests green on the assembled runtime* —
+  not on isolated bricks, but on the real thing: the packaged Vidocq runtime,
+  exercised through the eight in-reactor `-Ptck` runners (Config, Health,
+  Metrics, Fault Tolerance, Telemetry, JWT, Rest Client, OpenAPI).
+* *Jakarta EE Core Profile 11 certification is in preparation* — CDI Lite is at
+  774/774, `@Inject`/atinject is fully green, and the composite Core Profile TCK
+  stands at 10/13 test groups on JDK 25. The remaining gap is not implementation
+  work: a TCK helper requires an annotation-retention behaviour that changed on
+  JDK 25, and a
+  https://github.com/jakartaee/platform-tck/issues/2730[TCK challenge] is open
+  with the Jakarta project to resolve it.
+
+Every number above has a paper trail: per-brick TCK status pages are part of
+https://doc.vidocq.dev[the documentation], and the runs are reproducible from
+the in-reactor runners.
+
+== What else is in 0.3.0
+
+* *`vidocq:modularize`* — a new Maven goal that generates build-time module
+  descriptors for non-modular dependencies, so third-party classpath jars fit
+  Vidocq's strict Java Modules graph.
+* *`vidocq:check-module-info` / `complete-module-info`* — consumer
+  `module-info.java` verification, rolled out reactor-wide.
+* *Vauban client-proxy weaving tiers* — normal-scoped beans without a usable
+  no-arg constructor get their proxy entry constructor woven automatically at
+  `process-classes`, with a clear diagnostic for genuinely unproxyable beans.
+* *Mansart named-datasource routing, end to end* — on 0.2.0,
+  `@Repository(dataStore = "…")` silently fell back to the default datasource;
+  0.3.0 routes each repository to its named pool (`vidocq.pool.<name>.*`),
+  pairing with the PostgreSQL Dev Services one-container-per-datasource
+  provisioning.
+* *Erasmus* — a new brick implementing Jakarta Validation 3.1 (engine, the 21
+  built-in constraints, composition, interpolation) is in development on the
+  `dev` line. Not released yet.
+* *Versioned documentation* — doc.vidocq.dev now serves one frozen line per
+  release plus the development line, with full-text search and a tutorials
+  section.
+
+== One breaking change: extension coordinates moved
+
+Runtime extensions are now grouped by profile:
+
+[source,text]
+----
+io.vidocq.runtime.extensions.essentials      chappe-webserver, flyway/liquibase migration…
+io.vidocq.runtime.extensions.jakartaee.core  cassini-rest…
+io.vidocq.runtime.extensions.jakartaee.web   mansart data/pool/transactions…
+io.vidocq.runtime.extensions.microprofile    ravel, knock, dirac, heisenberg, humboldt, cervantes, cyrano, grimm…
+----
+
+The old `io.vidocq.runtime:vidocq-runtime-*-extension` coordinates are frozen at
+their last published version and will not receive 0.3.0 artifacts. Applications
+scaffolded with `vidocq create` pick up the right coordinates automatically.
+
+== Getting started
+
+[source,bash]
+----
+curl -fsSL https://vidocq.dev/install.sh | sh
+vidocq create --name hello-world --group-id com.example
+cd hello-world
+vidocq dev
+----
+
+The scaffolded application pins the released 0.3.0 parent. The
+https://doc.vidocq.dev/tutorials/0.3.0/[tutorials] walk through the rest — REST
+resources, CDI, persistence, observability — and the
+https://doc.vidocq.dev/vidocq/0.3.0/whats-new[what's-new page] lists everything
+in this train with links into the reference documentation.
+
+As always, the whole ecosystem is built in the open — AI-assisted, human-owned,
+TCK-verified — at https://codefloe.com/Vidocq[codefloe.com/Vidocq]. Feedback and
+contributions welcome.
