@@ -1704,7 +1704,7 @@ img[alt="Vidocq banner"] {
 }
 
 .vid-alpha-ribbon::before {
-  content: "0.2.0 alpha";
+  content: "0.3.0 alpha";
   position: absolute;
   top: 52px;
   left: -44px;
