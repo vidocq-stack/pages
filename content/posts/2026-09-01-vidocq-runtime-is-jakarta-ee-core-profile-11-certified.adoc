@@ -1,0 +1,91 @@
+---
+title: "Vidocq Runtime Is Jakarta EE Core Profile 11 Certified"
+description: The Jakarta EE Specification Committee has approved our compatibility certification request — Vidocq Runtime 0.3.0 is now a certified Jakarta EE Core Profile 11 compatible implementation.
+date: 2026-09-01
+layout: post
+authors: [yannblazart, antoinesabotdurand]
+tags: [certification, jakarta-ee, core-profile, tck]
+---
+
+image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+
+Vidocq Runtime 0.3.0 is now a certified **Jakarta EE Core Profile 11** compatible
+implementation. The
+https://github.com/jakartaee/platform/issues/1351[compatibility certification
+request] has been approved by the Jakarta EE Specification Committee — the
+final step of a conformance effort we have been documenting on this blog since
+the https://vidocq.dev/posts/vidocq-0-3-0-is-out-and-jakarta-ee-core-profile-11-certification-is-on-the-way/[0.3.0
+release].
+
+== What certification means
+
+Jakarta EE certification is not a badge you claim — it is a request the
+specification project reviews and approves, backed by a reproducible TCK run
+against the official Eclipse Foundation TCK (EFTL) binaries. Ours was executed
+against the actual released Maven Central artifacts, not source snapshots, and
+every step is public.
+
+== The numbers
+
+[cols="2,3"]
+|===
+| Specification | Result
+
+| Jakarta Annotations 3.0
+| 1/1 passed
+
+| Jakarta Contexts and Dependency Injection (Lite) 4.1 + Interceptors 2.2
+| 774/774 passed
+
+| Jakarta Dependency Injection 2.0
+| pass (`jakarta.inject-tck` 2.0.2)
+
+| Jakarta JSON Processing 2.1
+| 179/179 (api) + 18/18 (pluggability) passed, 0 failures
+
+| Jakarta JSON Binding 3.0
+| 295 run, 0 failures, 5 skipped
+
+| Jakarta RESTful Web Services 4.0
+| 2670 run, 0 failures, 131 skipped
+
+| Core Profile 11 composite TCK
+| 10/13 passed
+|===
+
+All six constituent specification TCKs and every required signature test are
+green. The Core Profile composite TCK itself stands at 10/13: the 3 remaining
+tests hit a JDK 25 `StackWalker`/`Utils.getDescriptor()` TCK-helper
+incompatibility, unreachable on any JDK 25 implementation regardless of
+conformance. We filed a challenge,
+https://github.com/jakartaee/platform-tck/issues/2730[`jakartaee/platform-tck#2730`],
+which the TCK project accepted — the fix already exists upstream and will ship
+in a future official TCK release.
+
+The full results, TCK versions, SHA-256 fingerprints, and GPG signature
+verification are on the
+https://vidocq.dev/certification/[public certification page], and the complete
+process is documented in
+https://codefloe.com/Vidocq/vidocq/src/branch/main/CERTIFICATION.md[`CERTIFICATION.md`].
+
+== Thank you
+
+Thanks to the Jakarta EE Specification Committee for reviewing the request,
+and to everyone in the community who pushed on the JDK 25 TCK-helper issue so
+the challenge could be accepted quickly. Vidocq can now carry the *Jakarta EE
+Compatible* mark for Core Profile 11 and be listed as a compatible product —
+one more proof point that a from-scratch, zero-dependency, AI-assisted
+implementation can meet the same bar as any other.
+
+Get started with the certified runtime:
+
+[source,bash]
+----
+curl -fsSL https://vidocq.dev/install.sh | sh
+vidocq create --name hello-world --group-id com.example
+cd hello-world
+vidocq dev
+----
+
+The https://doc.vidocq.dev[documentation] and the
+https://doc.vidocq.dev/tutorials/0.3.0/[tutorials] cover the rest.
