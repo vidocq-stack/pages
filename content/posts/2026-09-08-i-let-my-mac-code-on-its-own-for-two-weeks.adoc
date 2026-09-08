@@ -183,62 +183,12 @@ Each agent is a simple Markdown file: a header that pins down its rights and its
 Here's how the foreman distributes the work. When he needs to read the standard, dig through the code, or run the tests, he doesn't do it himself: he places an order with a specialist, whose mental scratchpad goes in the bin once the answer is delivered. That's what keeps his own desk clear.
 
 .The shop foreman delegates every bulky task to a specialist whose memory is discarded after use
-[plantuml, format=svg, opts=inline]
-----
-@startuml
-include::../plantuml-skin.iuml[]
-rectangle "Me, from the iPhone" as U
-rectangle "jpa-dev\nthe lead · full powers" as D
-rectangle "spec-reader\nreads the standard" as SR
-rectangle "explore\nfinds where things live" as EX
-rectangle "tck-runner\nruns the official tests" as TR
-rectangle "auditor\nhunts down the cheats" as AU
-rectangle "codegen\nmanufactures code" as CG
-rectangle "tracker\nkeeps the logbook" as TK
-rectangle "thinker\nsettles the hard calls" as TH
-rectangle "vision\nreads my screenshots" as VI
-rectangle "jdtls" as J
-rectangle "local server" as C
-U --> D
-D --> SR : delegates
-D --> EX : delegates
-D --> TR : delegates
-D --> AU : delegates
-D --> CG : delegates
-D --> TK : delegates
-D --> TH : delegates
-D --> VI : delegates
-D ..> J : Java navigation
-D ..> C : big logs
-@enduml
-----
+image::/images/posts/mac-code-alone/agent-team.svg[The shop foreman delegates every bulky task to a specialist whose memory is discarded after use]
 
 The commands are the files in the commands folder. Each is, again, a bit of Markdown: a ready-made instruction I trigger by typing its name preceded by a slash. They orchestrate the day. The skeleton of a session fits in five gestures, and the loop in the middle is test-driven development in its strictest form: first write the failing test, then the minimum code to make it pass.
 
 .A session in five gestures, with the red-then-green loop of test-driven development at the center
-[plantuml, format=svg, opts=inline]
-----
-@startuml
-include::../plantuml-skin.iuml[]
-left to right direction
-rectangle "/next" as N
-rectangle "wakes the tooling,\nindexes the tests" as W
-rectangle "reads the logbook,\npicks ONE task" as P
-rectangle "writes the\nfailing test first" as T
-rectangle "implements\nthe minimum" as I
-rectangle "/gate\nbuild + tests + audit" as G
-rectangle "/commit\nlogbook, then commit" as CM
-rectangle "/session-end\nhands over" as SE
-N --> W
-W --> P
-P --> T
-T --> I
-I --> G
-G --> I : red
-G --> CM : green
-CM --> SE
-@enduml
-----
+image::/images/posts/mac-code-alone/session-loop.svg[A session in five gestures, with the red-then-green loop of test-driven development at the center]
 
 The cards, finally, in the skills folder, are the project's long memory: the architecture, how to read the tests without drowning, the code-generation rules, the discipline to keep when the session grows heavy. The model pulls them out of the drawer on demand; they don't encumber it permanently.
 
