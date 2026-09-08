@@ -1,0 +1,306 @@
+---
+title: "I Let My Mac Code All by Itself for Two Weeks"
+description: Can a local LLM, cut off from the internet, seriously contribute to implementing Jakarta Persistence? A field report — the wins, the derailments, and the thirteen-agent workshop it took to make it work.
+date: 2026-09-08
+layout: post
+authors: [yannblazart]
+tags: [ai, local-llm, java, jakarta-persistence, mansart, tooling]
+---
+
+[NOTE]
+====
+This article was originally published in French on the https://blog.sciam.fr/2026/08/31/jai-fait-coder-mon-mac-tout-seul.html[SCIAM blog^] on 31 August 2026, under a CC BY-NC-SA 4.0 license. This is the author's own English translation. SCIAM sponsors the Vidocq project.
+====
+
+It overheated. It said silly things. And sometimes, it was right.
+
+I have to start with a confession, or nothing that follows will make sense. Vidocq, the thing I spend my nights on, is a Java software stack written in large part with AI. Not AI running on my desk: AI running in data centers on the other side of the world. Claude, Copilot, that breed of creature. I type an intention, a giant brain somewhere sends me back code, I review, I fix, we move forward. It works, and I'm not ashamed to say it.
+
+So why on earth try to do the same thing on my own machine, with a model pulled down onto my hard drive, cut off from the internet?
+
+Because one day someone asked me the question that stings. "Local AI — does it actually work?" And all I had were hunches, not an answer. So I unplugged the cable and watched what happened.
+
+Spoiler: it works, with quotation marks everywhere, a bold asterisk, and an electricity bill.
+
+== The setting, and why you won't believe me
+
+My machine is a MacBook with an M5 Max chip and 128 gigabytes of memory. Let me say it right away: that's cheating. It's like claiming you drove Paris to Marseille in an electric car without mentioning it was a luxury sedan with three batteries. A normal computer, the one sitting on your lap right now, does not run what I'm about to describe. Keep that in mind with every sentence. This is not an experiment you can reproduce in everyone's living room. It's a laboratory experiment, and the laboratory costs the price of a small used car.
+
+Second detail the marketing brochure forgets to mention: it gets hot. An artificial intelligence model is billions of multiplications per second. When all of that starts churning, the machine turns into a space heater and the fans strike up their little song. My office gained a few degrees, which, on a sunny afternoon, was not exactly welcome. You code, and you hear the machine straining, like an old refrigerator kicking back on.
+
+The model in question is called Qwen3.6, a Chinese descendant of the great family of large language models. Its compact version weighs 35 billion parameters, of which only 3 billion are working at any given moment. Picture a company of 35,000 people where, for each task, you only wake up the 3,000 relevant specialists. The rest sleep. That's what makes it fit on a personal machine: compressed, it takes up about twenty gigabytes — roughly one season of a TV series in high definition.
+
+To drive it, I use two tools. A local server that hosts the model and answers questions, and a coding assistant that plays conductor: it reads my files, launches builds, writes code, reruns tests. The model is the brain, the assistant is the hands. My own job, in all this, increasingly boils down to that of a slightly suspicious foreman.
+
+The goal, while I was at it, was not to generate a "hello world". Since I was already cheating on the hardware, I might as well not cheat on the rest. So I aimed at a prize bull, one of the most treacherous specifications in the entire Java ecosystem: implementing Jakarta Persistence, the official standard that lets a program talk to a database. An arid monument, equipped with its own conformance test suite: 269 test families, roughly 1,745 individual checks, each one merciless. The kind of mountain you don't climb in a weekend, and that most sensible people wouldn't attack with a small AI perched on a laptop. Call it madness. I call it refusing to make things easy for myself: to know whether local AI really holds up, you have to put it in front of something hard, not hand it a softball. An easy demonstration only proves easiness.
+
+== What works, and what blew me away
+
+Let's start with the good news, because there is some.
+
+It's fast — but let me be honest about the numbers, because that's exactly where a trap hides, and I was the first to fall into it. Cold, on a short question, the model spits out about 140 words per second. A human reads four. The machine therefore writes faster than you can proofread, which is exhilarating and a little unsettling. Except that over the course of a real session, as the conversation grows heavy and the model has to keep thousands of lines in mind, that number melts. In real-world average, you land somewhere around 65 to 90 words per second. The dashboard proudly displays the big number from the start, and you have to remember that the real figure is an endurance average, not a hundred-meter record. Both are true. It's just that advertising always prefers the second one, and I nearly got fooled by my own enthusiasm before recounting.
+
+And the best for last: the whole thing works offline. I turned off the wifi, just to be sure. The machine carried on as if nothing had happened. No data going anywhere, no monthly subscription, no remote server that could close up shop overnight. Just me, the silicon, and the purr of the fans.
+
+== The hunt for the best model
+
+A little flashback, because this story sums up the adventure rather well.
+
+Before even starting, I had to choose the model. And there, a choice arises: you can compress a model more or less aggressively to make it fit on a machine. Compressing means rounding off its internal numbers; the more you round, the lighter and faster it gets, but in theory the more finesse it loses. My engineer's intuition was crystal clear: the less I compress, the smarter the model stays. So I grabbed three versions of the same model, from the most squeezed to the most generous, and pitted them against each other.
+
+A quick aside, because these model names look like license plates and nobody ever explains how to read them. Mine is called, brace yourself, Qwen3.6-35B-A3B-MTPLX-Optimized-Speed. Let's take it apart. Qwen3.6 is the family and the generation, like a car make and model year. Then comes the size, and this is where it gets slightly tricky.
+
+[cols="1,3"]
+|===
+|in the name |what it means
+
+|7B, 35B, 70B
+|the number of neurons, in billions. The bigger, the more knowledgeable — and the heavier to lug around
+
+|MoE
+|"mixture of experts": the model is carved into internal specialists, and only wakes a few of them for each word, instead of lighting everything up
+
+|A3B
+|"3 billion active": out of the model's 35, only 3 are working at any given instant. That's exactly what makes it viable on a desktop machine, and it's also the signature of a MoE: the acronym itself doesn't appear in the name, but that A3B gives it away
+|===
+
+Then, separately, the compression rate, which you spot by a little code like Q8 or Q4, sometimes written 8bit, 4bit. That's the dial I mentioned: how much the internal numbers get rounded.
+
+[cols="1,1,1,2"]
+|===
+|in the name |precision |relative weight |plainly put
+
+|FP16
+|16 bits
+|the heaviest
+|the original, uncompressed, full-finesse version
+
+|Q8 / 8bit
+|8 bits
+|half
+|lightly rounded
+
+|Q6 / 6bit
+|6 bits
+|lighter
+|well rounded
+
+|Q4 / 4bit
+|4 bits
+|the lightest
+|heavily rounded — the agility bet
+|===
+
+The rest — MTPLX, MLX, and people's names glued in front with a slash like Youssofal/ — are format and workshop details: which garage prepared the version, for which kind of machine. Useful for finding your way around, dispensable for understanding. Once you hold this decoder, a name that looked like a password becomes a readable spec sheet: Qwen version 3.6, thirty-five billion neurons of which three work at a time, tuned for speed. Already less intimidating.
+
+Except an intuition is worth nothing until you've confronted it with numbers. So we built a test bench. Not just to measure speed — that would have been too easy — but quality: does the model call its tools correctly, does it know the Java standard inside out, can it chain three interdependent actions without losing its way. A small battery of trials, exactly the same for all three candidates.
+
+Verdict: the heaviest version, the one weighing almost double, lost. Across the board. Same answer quality as the others, but twice as slow and twice as memory-hungry. Worse, it was the only one of the three to flat-out fail a trial. The lightest one did the same work in almost half the time. I had bet on muscle; agility won.
+
+But the most instructive part isn't the result — it's what almost made me miss it. On the very first run, the ranking was inverted: the heavy version looked better, and I was about to believe it. Except the three models weren't configured the same way; a configuration detail was lingering on one and not the others. Once everyone was brought back to the same starting line, the ranking flipped. The lesson stuck with me: a sloppy test bench doesn't stay politely silent, it lies to you with aplomb, and you walk away delighted with the wrong conclusion under your arm.
+
+That's where the remote heavyweight, Claude, truly earns its salary. It's not so much that it codes fast. It's that it runs the test bench with a rigor I no longer have, myself, at eleven at night. It's the one that spotted my first comparison was skewed, that insisted on re-measuring everything on equal footing, that recorded every number with its caveats instead of telling me what I wanted to hear. A belief that doesn't survive measurement doesn't deserve to be kept; but you still need someone meticulous enough to apply that principle without flinching, especially when the belief in question is your own. Every measurement I've quoted since the beginning — the speeds, the comparisons, the numbers that contradict my intuitions — comes from that bench, run four-handed with a machine more patient than me.
+
+== What went off the rails — and here's where we laugh
+
+Right. Now for real life.
+
+A coding AI has a working memory. A sort of desk on which it lays out everything it needs: the code in progress, test results, my instructions. That desk has a size. When it overflows, everything falls on the floor and the session stops dead. One day, on a single task, my assistant filled its desk all the way to the crash. Investigating, I found the culprit: to read the sources of one test, it had unzipped the same archive 34 times in a row, spreading thousands of useless words in front of its own eyes each time. Like someone who, to check a phone number, reprints the entire directory before every call. Solution: I flat-out forbade it from unzipping anything. That gets delegated to a secondary assistant whose memory goes straight in the bin after use.
+
+Then there was the episode of the ghost intern, and that one I lived through from my phone, slumped on the couch, driving the machine left in the office. Small parenthesis, because I like it: the machine runs at home, and I command it from my iPhone through an encrypted private network. The brain stays warm on the desk; I supervise from the couch. We live in strange times.
+
+Anyway — the intern. After a while of conversation, my AI started doing something fascinating and infuriating: instead of executing an action, it announced it. It would write "I shall now proceed with the plan: first the failing test, then the code" and then… nothing. Full stop. Like an intern who conscientiously describes the task he's about to accomplish, then leaves to get a coffee and never comes back. I'd reply "well, go on then", it would politely re-describe its intention, and head back to the coffee machine.
+
+image::/images/posts/mac-code-alone/stagiaire-fantome.jpg[The ghost intern: it zealously describes the task, then evaporates before doing it]
+
+I had eventually written it down in black and white in its instructions: "You do not narrate what you are going to do. You do it." It relapsed anyway. A model this size imitates what it just read more than it obeys its instructions, and when it has just written three sentences of fine intentions, the natural slope is to write a fourth. What finally woke it up wasn't pleading, nor "are you continuing?", nor pressing Enter with a sigh. It was the square order: the /next command, which curtly reopens its roadmap and says "next task, execute". No "please". Marching orders. Since then, when it daydreams, I don't argue and I don't nudge it gently — that only makes things worse by handing it yet more prose to imitate. I hand it back its roadmap, period, and it gets back to work. There's a management lesson in there that I'll leave you to meditate on.
+
+My favorite, the one that cost me the most time and made me laugh the hardest, is the story of the version that didn't please. My assistant needs a Java code-analysis tool to find its way around — the equivalent of your word processor's autocompletion, but for programs. That tool stubbornly refused to start. Hours of investigation. And here's the cause: to check which version of Java was installed, my assistant asked the question and expected an answer like "25 dot 0 dot 3". Except recent versions of Java simply answer "25". No dots. And faced with this too-short answer, the program concluded there was no Java at all, and silently unplugged the whole toolchain. An entire pipeline blocked by a piece of software sulking because a number didn't have the expected punctuation. I fixed the problem by installing a Java version whose number contained the famous dots. It is magnificently stupid. It is also, precisely, the daily life of software engineering.
+
+There were other delights. An acceleration technology supposed to double the speed, magnificent on paper, that the server categorically refused to load — and that I believed was active for an entire day before realizing I was turning the knobs on the wrong twin of the model. Or this savory detail: the model I use can, in theory, look at images. It has the circuits for it. But the way it was compressed broke that capability, and the server now serves it blind. I'd send it a screenshot, it would politely answer "I see no image in your message." I ended up downloading a second, smaller model whose only job is to read my screenshots and dictate them to me. One AI to code, another to look over its shoulder. You get organized.
+
+In the same vein, there was the password-at-home story. I wanted to plug in a code-quality tool, a piece of software I run in a little sandbox on my own machine, cut off from the world like everything else. I launch the analysis, and the tool politely tells me it needs an authentication token. A password. At my place, to talk to a program that only talks to itself. My first reaction was a shrug: it's local, come on — who am I supposed to introduce myself to, myself? Except the software wouldn't budge, and it was right in its own way: local protects your data, not your access. The program still wants to know who's calling, exactly like your home router demands a password even though it sits in your living room. I had to forge myself a pass for my own machine. You smile, but the lesson about what running local really means is fair: less dependence on the outside world, yes; anarchy, no.
+
+== So, where do we stand?
+
+Let's be honest, because that's the only angle I care about.
+
+I haven't won. Far from it. What the machine and I have built so far are the foundations: the project's skeleton, the harness that launches the 1,745 official tests, the conformance database that stands itself up with its 185 tables. And one piece I'm rather proud of: from simple annotations placed on the code, the AI automatically generates a whole stretch of internal plumbing — without cheating, without the lazy shortcuts this kind of tool loves to sneak in. Vidocq forbids itself certain conveniences, and the local model has learned to respect those rules, provided you remind it firmly and often.
+
+But the official test suite itself is still almost entirely red. The engine does nearly nothing for now, so the tests fail en masse, and that's perfectly normal at this stage. We are at the foot of the mountain, crampons on, map unfolded. The summit is very far and very high.
+
+What interests me is not announcing a victory I don't have. It's what the journey reveals. A model that fits in my backpack, cut off from the world, wrote real Java code conforming to an industrial standard, debugged its own compilation errors, and followed demanding architectural rules. It also went in circles like a distracted intern, clumsily saturated its own memory, and threw in the towel over trifles. Both at once. That's the truth of the matter.
+
+== What's really going on inside the machine
+
+So far I've talked about the model as a single brain. The reality is more organized, and more amusing. It's not a lone genius hunched over a keyboard; it's a small team. The technical jargon calls them "agents"; I prefer to introduce them as the staff of a small workshop, each at their station, each with their own keys.
+
+image::/images/posts/mac-code-alone/petite-entreprise.jpg[Not a lone genius but a small company: every role has its station and its access rights]
+
+A model let loose alone on a project this size gets lost. It forgets what it was doing, it goes in circles, it makes the same mistake three times with the same good faith. To get anything useful out of it, a whole organization had to be built around it. Positions, access rights, house rules, procedures. Let me introduce the staff.
+
+There's the lead developer. He's the one who writes the code, runs the tests, and has the right to modify everything. The bulk of the work goes through his hands. But he has one iron rule: a single task at a time, then he closes shop and we start fresh. A developer who keeps too many folders open on his desk ends up mixing everything, and his fills up fast.
+
+Around him, specialists. The scholar knows the standard by heart: when the developer has a doubt about what the rule demands, he asks, the scholar goes off to read the official documents and comes back with the answer and the exact citation. The scholar is not allowed to write a single line of code. He reads, he cites, he leaves. And his own memory is discarded after each consultation, so as not to clutter the developer's.
+
+There's the inspector, whose only trade is suspicion. After each step, he rereads the work hunting for the shameful shortcuts: code that pretends to work, the empty function left there with a promise to come back, the test quietly unplugged so the numbers look better. AI adores these little cheats, like a pupil copying the last line of the answer key without doing the math. The inspector flushes them out — and, crucially, he's not allowed to fix anything. He observes, he reports, and that's it. Otherwise he'd be judge and party.
+
+There's the archivist, who keeps the logbook: where we are, what's done, what the next work site is. He's the reason we can close a session at night and reopen one the next day without having forgotten everything. The project's memory doesn't live in the model's head, which is short, but in files reread at every waking. An electronic brain that learned to write on its hand so as not to forget.
+
+And there's the sage, the one you only disturb as a last resort, when the developer has hit the same wall twice in a row. The sage thinks slowly, more slowly than the others, and hands down a verdict: here's the decision, here's why. We almost never call him. He's the old-timer quietly smoking at the back of the workshop, the one you fetch when nobody understands anything anymore.
+
+There are others. One who makes sure no forbidden parts get added to the engine. One who watches how the code juggles several tasks at once, where the sneakiest mistakes live. A scout you send on reconnaissance to answer "where is that thing stored" without the developer having to rummage himself. And, as we saw, the one who serves as eyes. A dozen roles in all, each with tailor-made rights. The developer can break everything; the inspector can touch nothing. This separation is not a flourish: it's what keeps each of them from overflowing their role, and believe me, they love to overflow.
+
+Alongside this team, two more ingredients: index cards and buttons.
+
+The cards are thematic notes filed in a binder: how the project is organized, how to launch the big test suite, how to produce code without cheating, how the model must manage its own memory as the session grows heavy. Rather than keeping everything permanently in the model's head, which would clutter it for nothing, you pull the right card at the right moment, and file it back after. A well-kept desk, not an empty desk.
+
+The buttons are the gestures you repeat ten times a day, turned into shortcuts. One to open the workday, which wakes the tooling and prepares the ground. One to verify everything before validating anything: does it compile, do the tests pass, did the inspector find something to complain about. One to consult the scholar. One to read a screenshot. Each button triggers the right procedure and summons the right specialist, without me having to explain everything from scratch.
+
+== The workshop in the clear, for those who itch to see it
+
+The metaphor is fine for conversation, but if you're in the trade you want the actual nuts and bolts. Here they are. Everything lives in a discreet folder at the project root, .opencode, plus a few text files. Nothing proprietary, nothing magic: Markdown and a little JSON, versioned in the repository like the rest of the code.
+
+[source,text]
+----
+.opencode/
+  agents/     13 roles, one file each: jpa-dev (the lead),
+              spec-reader, tck-runner, sonar-runner, codegen,
+              auditor, explore, tracker, module-guardian,
+              dependency-gatekeeper, virtual-threads-reviewer,
+              thinker, vision
+  commands/   /next /gate /commit /tck /tck-fix /sonar /audit
+              /spec /see /status /session-end /log-bug /log-bench
+  skills/     mansart-jpa, mansart-jpa-tck, vidocq-codegen,
+              context-discipline
+  OPERATING.md      the shared rules, injected into every agent
+  opencode.json     the model, the limits, the memory management
+PLAN.md  TASKS.md  STATUS.md   the roadmap and the logbook
+----
+
+Each agent is a simple Markdown file: a header that pins down its rights and its model, then a text that explains its trade. The shop foreman, the one I called jpa-dev, is the only one authorized to modify everything and run any command — except the genuinely dangerous gestures like erasing history, which demand confirmation. The others are bridled on purpose: the inspector and the scholar simply don't have the tool to write a file; it was taken out of their kit. It's not a politeness we ask of them, it's a lock. And we've checked that it holds: ordered to write a file, the inspector is physically incapable of it — the tool isn't in his kit.
+
+Here's how the foreman distributes the work. When he needs to read the standard, dig through the code, or run the tests, he doesn't do it himself: he places an order with a specialist, whose mental scratchpad goes in the bin once the answer is delivered. That's what keeps his own desk clear.
+
+image::/images/posts/mac-code-alone/equipe-agents.png[The shop foreman delegates every bulky task to a specialist whose memory is discarded after use]
+
+The commands are the files in the commands folder. Each is, again, a bit of Markdown: a ready-made instruction I trigger by typing its name preceded by a slash. They orchestrate the day. The skeleton of a session fits in five gestures, and the loop in the middle is test-driven development in its strictest form: first write the failing test, then the minimum code to make it pass.
+
+image::/images/posts/mac-code-alone/boucle-session.png[A session in five gestures, with the red-then-green loop of test-driven development at the center]
+
+The cards, finally, in the skills folder, are the project's long memory: the architecture, how to read the tests without drowning, the code-generation rules, the discipline to keep when the session grows heavy. The model pulls them out of the drawer on demand; they don't encumber it permanently.
+
+One last number, for the obsessives like me. Everything the model permanently holds in mind at the start of each turn — its foreman's manual, the shared rules, the list of available cards — comes to roughly five thousand words. That's deliberately lean: on a machine where every loaded word costs time, you keep only the essentials in view and go fetch the rest only when it's needed. The whole philosophy of the setup boils down to that number: carry nothing you're not using right now.
+
+== Why all this clutter: a short memory, and one that slows down
+
+If you're wondering why I burden myself with thirteen agents, index cards, and a logbook instead of chatting comfortably with a single AI, the answer lies in a constraint I've been serving you in small doses, and it's time to explain it properly. It governs everything else.
+
+The model has a working memory. Computer scientists call it the context window, and mine's is 131,072 tokens. A token is about three quarters of a word. Say a hundred thousand words. Everything the model needs for the current turn must fit in it at the same time: its instructions, the code it's looking at, the test results, our conversation. Beyond that, it overflows, and room must be made.
+
+First gesture of the recipe: never fill the window to the brim. We keep a reserve of about twelve thousand tokens, untouchable, for an utterly mundane reason. When the model answers, it writes, and that writing also consumes room in the window. If nothing is left the moment it starts drafting, its answer gets sliced off mid-flow — usually at the worst spot, while it's writing a file. We lived it: an answer cut dead, a half-written file, a wasted turn. The reserve is the cushion that guarantees it always has room to finish its sentence. Simple, but you had to think of it, and above all measure the right amount: too small and you cut answers off; too big and you waste usable window.
+
+Second constraint, sneakier, and it's the heart of the matter. The fuller the memory, the slower the model. Not a little: a lot. To produce each new word, it must in effect reread everything it already holds in mind. With an empty desk, it flies. With a full desk, it labors. The numbers from my own machine, recorded on the bench:
+
+[cols="2,1"]
+|===
+|what it holds in memory |its speed
+
+|almost nothing
+|140 words per second
+
+|the equivalent of one large file
+|90 words per second
+
+|a long work session
+|65 words per second
+
+|memory nearly full
+|55 words per second
+|===
+
+A half-full model works at half speed. That's not a defect to fix; it's the nature of the beast. And it changes everything, because a conversation that drags on isn't just risky for the model's lucidity — it also becomes slower and slower, word after word.
+
+image::/images/posts/mac-code-alone/bureau-memoire.jpg[The fuller the desk gets, the slower the model. The whole organization aims to keep it clear]
+
+From this flows the entire organization, and here is the recipe proper. Since a big context is slow, expensive, and stupefying, we keep the foreman's as empty as possible, at all costs. How? By forbidding him from reading anything bulky himself. The six megabytes of official test sources, for instance: the foreman never touches them. He sends the scholar to read them, in the scholar's memory, and the scholar comes back with only forty lines of targeted answer. The six megabytes existed, were read, then discarded along with the sub-agent's memory. The foreman only ever saw the summary. Each specialist is a disposable memory you fill and empty to spare the boss's.
+
+That is the true role of sub-agents. People take them for a matter of organization, of division of labor. In reality it's a memory-economy ruse. Delegating, here, isn't offloading a chore — it's preventing your own desk from filling up. And a desk that stays clear is a model that stays fast and lucid until the end of the session.
+
+The rest of the rules flow from the same source. A single task per session, to avoid accumulating. The project's state written in files rather than held in the head, so you can close and reopen cold without dragging anything along. Navigating the code with a tool that answers in ten words instead of rereading entire files. Everything, absolutely everything, aims at keeping the window light. Once you've grasped that, the clutter of agents stops being clutter. It's a machine carefully designed not to remember too many things at once.
+
+And despite all that, one of my tasks ends on average around ninety thousand tokens in memory, out of the hundred thirty-one thousand the machine can hold. Three quarters of the desk occupied. All that discipline, those disposable specialists, those rules obsessed with lightness — and we still fill nearly everything. Maybe that's the true measure of the difficulty: a single programming task, done seriously, is enough to saturate three quarters of a machine's memory. The discipline performs no miracle. It merely keeps things from overflowing, and given what the overflow would cost, that's already something.
+
+== The least glorious secret
+
+Now, the itchy question. This whole beautiful organization — the team, the cards, the buttons, the rules adjusted to the millimeter: who built it?
+
+Not the local model, at least not this time. To go fast, I entrusted the design to Claude, one of the big remote models, the very one I told you runs the rest of Vidocq. It's the one that ran the speed measurements, that diagnosed the dot-less version number affair, that drafted the instructions of each team member, that invented a new guardrail after every crash. For days, a model installed in a data center thousands of kilometers away built, piece by piece, the workshop in which a small local model would then be able to work alone.
+
+And I want to be honest on this point, because it's tempting to draw too neat a moral from it. I have not proven that the local model was incapable of building its own house. I simply didn't ask it to. I took the heavyweight's shortcut because it was there, at hand, and it was faster — not because I had demonstrated the little one couldn't manage. Maybe it could, well guided, more slowly. I don't know yet.
+
+That is precisely the next experiment, and the real step left to climb toward fully-local: no longer just having the local AI work in a workshop built for it, but having it build the workshop. For now, let's say it as it is: the heavyweight made the little one's crutches; the little one stands and walks. Whether it can learn to make its own crutches remains to be seen. I'll tell you about it.
+
+== The day I let it organize itself
+
+I said I'd tell you later whether it could make its own crutches. I didn't last a day.
+
+Here's the context. The work advances by small tasks that I carve out one by one, generally with the help of the big remote model. One evening, the list ran dry. The next chunk had to be attacked — a big chapter — and cut into tasks fine enough to fit in the little one's short memory. Rather than doing it myself, I wondered: what if I let the local model give itself its own orders? I set it a single rule, but a firm one: before inventing anything, go read the official tests that describe what must be built. Then carve.
+
+The result floored me, in both directions.
+
+The good first. It really did go read the tests. It didn't invent them, it cited the real ones, down to the line, and it drew from them a task list in an order that held together: lay the foundations before building on top, don't try to modify a piece of data before knowing how to create it. For something presented everywhere as the private hunting ground of the big models, the skeleton was surprisingly sound.
+
+The less good next. It overflowed. It slipped into the list tasks that belonged to a chapter much further away, dragged along by tests that mixed subjects. It laid two or three monstrous tasks, of the kind where a single line calmly announces "implement the entire interface" — weeks of work disguised as a checkbox. And above all, it forgot a rule we had set together twenty minutes earlier, a rule it had right in front of it, which it superbly ignored.
+
+The moral of the first draft fits in one sentence: it can rough out, not finalize. It raises a decent frame, but then someone has to cut the off-topic, bring the monster tasks back to human size, and catch the rules it let slip. It does make itself crutches — they're just a bit crooked, and an adult has to come back and tighten the screws before it dares lean on them.
+
+Except I wasn't going to settle for correcting its homework. What interested me was whether it could learn. So I did what you do with an apprentice: I took each of its blunders and turned it into a written rule, black on white in its instructions. Don't put in your list what belongs to a future chapter. Don't build a giant task. File your tests in the right place. And reread yourself before handing in your copy. Then I erased its first draft, and let it start over from scratch, those rules in front of it.
+
+It was markedly better. The oversized tasks were gone, most of the off-topic too, the list was shorter and better ordered. The written rules had held it. But not completely: it still kept one or two functions that visibly belonged to a distant chapter, and it had quietly recreated a catch-all task — the box where you throw what you don't know how to file. The gross errors corrected, the fine nuances kept slipping through its fingers. You can teach it from its mistakes, and it genuinely learns. But there remains a frontier the written rule doesn't cross: that small judgment that makes you say "this has no business being here." Past a certain finesse, you still need someone who knows — and that someone, for now, isn't it.
+
+Maybe that's the true status of local AI today. Not incapable of thinking in your place. Capable, even, of learning from its blunders when you write them down in black and white. Just not yet capable of proofreading itself all the way.
+
+So I didn't let it proofread itself.
+
+This is where I had my idea, and I'll allow myself to be a little proud of it, because it's mine. Not the big remote model's, which built the whole workshop; not the small local one's, which works in it. Mine — the human left in the loop — with a dead-simple trick every writer knows: you always proofread someone else's text better than your own. Your own, you already love; you glide over its flaws without seeing them. So why not have the model proofread the plan, but in a fresh conversation, brain wiped, hiding from it that it's the author? The same model, summoned this time as an editor, not as a writer.
+
+I built a second command for that, which I called /check-plan. It relaunches the model cold, with a single mission: here is a plan someone wrote — tear it apart, find what overflows, what's too big, what's badly filed, and fix it.
+
+The result blew me away. This time, it caught everything. The off-topic sent back to the right chapter, the giant tasks carved into digestible pieces, the tests put back in their place. Better: it corrected things I hadn't even pointed out, and it had the elegance to end with "these two points, honestly, I'm not sure — your call." The editor succeeded where the writer had failed. The same model, the same machine. The only difference is that we had it proofread the work of a stranger who happened to be itself.
+
+And here's what delights me, no offense to the machines. That idea — neither the big remote brain nor the small local one had it. It's the human on duty who found it, reaching into an old professional reflex. In a story where one AI designed the workshop and another ran it, it was still me who brought the sleight of hand neither of them had seen. Maybe we're not entirely obsolete, we humans. We still have ideas the machines, for now, don't think to have.
+
+== So — does local AI work?
+
+Yes. With the quotation marks promised at the start of this article.
+
+Yes, if you have the right machine, and that machine is expensive and runs hot. Yes, if you accept spending part of your time not coding, but understanding why your assistant is sulking. Yes, if you measure everything and take nothing on faith — including and especially your own intuitions, which are wrong more often than we admit.
+
+But let nobody sell you simplicity. Downloading a model and watching it code alone in your place is a brochure fantasy. What I lived through looks far more like assembling a project team: recruiting the right profiles, writing the job descriptions, handing out the keys, drafting the procedures, and measuring relentlessly to distinguish what actually works from what you told yourself. The model is the engine, and a good engine. But an engine sitting on a workbench takes you nowhere. You have to build the car around it, and the car is the bulk of the project. Making local AI that works is not simple. It is exactly the opposite — and that's the one lesson I retain without the slightest reservation.
+
+What has changed, on the other hand, is that this is no longer science fiction. A private model, on a private machine, with no pay-per-click billing and no data escaping, can today seriously contribute to a serious software project. Five years ago, that sentence would have raised smiles. The biggest part of Vidocq continues to be written with the big remote models, because they're faster and stronger, and I'll keep using them without complexes — including to build the little one's house. But the gap is narrowing, and the idea of one day doing everything at home is no longer ridiculous. It's just expensive, noisy, and much more complicated than it looks.
+
+There's one last thing, and it surprised me. With the big remote models, the ones powering Claude Code, Codex, and tools of that ilk, you can afford to be casual. You toss out a slightly vague intention, the machine fills the gaps, and most of the time it works. You do have to keep an eye on what comes out, of course, because those models have a discreet flaw: their power lets them take liberties that go unnoticed. A little arrangement with the rule here, an elegant shortcut there, hidden under the mass of good code around it. It runs, so you don't look too closely. It's comfortable, and a bit treacherous.
+
+Local AI doesn't grant you that comfort. It's too limited to fill your gaps for you. If your intention is fuzzy, it produces fuzz. If you haven't built it a memory, it forgets. If you haven't structured it, it spins out — and it does so visibly, noisily, immediately. It forces you to be precise, serious, methodical, to write down in black and white what you expect, to verify every step, to leave nothing to chance. That's not free. Some evenings it's downright exhausting.
+
+But thinking back on it, this demand has a name, and it isn't a punishment. Being precise, structured, suspicious of what you produce, verifying instead of believing: that is exactly the engineer's craft. The big model lets you forget it as long as it compiles. The little one drags you back to it by force. And all things considered, I'm not certain it's the little one that makes me the worse engineer.
+
+There is, by the way, a cost to the big models' speed that few people talk about. When a machine hands you in three minutes what would have taken you three hours, it does you a proud service — but it also leaves you a tab: code that works, and that you haven't really understood. We call that technical debt; I'd rather call it a comprehension debt. It's invisible as long as everything rolls. Then one day it breaks, or needs changing, or someone asks you why it's built that way, and you must repay in one lump what you didn't learn along the way. It's exhausting, and much harder than understanding as you go.
+
+Local AI doesn't let you race off that fast. It's slower, inevitably, but that slowness has a less vexing name than it seems: attention. You stay inside. You see the details go by, you keep your hands in the grease, you understand what's being built because you have to guide it step by step. And even so, on all the thankless plumbing, the repetitive, the code that doesn't deserve your evening, it remains a considerable time-saver. You stop wearing yourself out on what isn't worth it, without going into comprehension debt.
+
+So I wonder whether the real sweet spot isn't right there, halfway. Not the heavy artillery that does everything in your place and leaves you a spectator of your own code. Not the all-by-hand that grinds you down on trifles either. Something in between: powerful enough to rid you of the tedious, demanding enough to keep you at the controls. The best of both worlds, quite possibly. And above all the precise place where the engineer and the artificial brain stop fighting for the seat and work at the same table, each at their own pace — one fast, the other attentive. True complementarity is not the human watching the machine, nor the machine replacing the human. It's that.
+
+image::/images/posts/mac-code-alone/complementarite.jpg[True complementarity: neither surveillance nor replacement, but two ways of working at the same table]
+
+In the meantime, my Mac has slimmed down by a good hundred gigabytes, I've taught a piece of software that a version number can go without dots, and I have two artificial intelligences splitting the work on my desk, one of which serves as the other's eyes.
+
+If that isn't the future, it certainly looks a lot like it. If only by the temperature of the room.
+
+---
+
+_Yann Blazart develops the Vidocq software stack. All the measurements cited in this article were taken on his own machine and recorded; he will gladly provide them to anyone who doubts, which is the least one can do when talking about artificial intelligence._
+
+_Transparency, while we're at it: this article was written with the help of an AI — the same breed it talks about. To name the models, since that's precisely the subject: the small local model of the story is Qwen3.6-35B-A3B, and the big remote model that built the workshop, ran the measurements, and drafted this text at my side is Claude. I feel no shame about it, and I'd rather say it than hide it. The machine held the keyboard and suggested turns of phrase; the ideas, the measurements, the mistakes, the biases, and the questionable jokes remain mine. The brain juice is still supplied by me. Someone had to decide what to talk about, sort what was true from what was convenient, and check that the machine wasn't taking a few liberties of its own, hidden under the mass._
