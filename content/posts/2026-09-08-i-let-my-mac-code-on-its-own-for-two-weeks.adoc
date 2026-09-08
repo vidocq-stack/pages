@@ -159,7 +159,7 @@ The buttons are the gestures you repeat ten times a day, turned into shortcuts. 
 
 == The workshop in the clear, for those who itch to see it
 
-The metaphor is fine for conversation, but if you're in the trade you want the actual nuts and bolts. Here they are. Everything lives in a discreet folder at the project root, .opencode, plus a few text files. Nothing proprietary, nothing magic: Markdown and a little JSON, versioned in the repository like the rest of the code.
+The metaphor is fine for conversation, but if you're in the trade you want the actual nuts and bolts. Here they are. Everything lives in a discreet folder at the project root, .opencode, plus a few text files. Nothing proprietary, nothing magic: Markdown and a little JSON, versioned in the repository like the rest of the code — you can browse the whole setup on the https://codefloe.com/Vidocq/mansart/src/branch/ybl/jpa-opencode[ybl/jpa-opencode branch^] of the mansart repository.
 
 [source,text]
 ----
