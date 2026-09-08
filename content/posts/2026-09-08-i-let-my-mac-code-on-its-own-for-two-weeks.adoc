@@ -11,7 +11,7 @@ image::/images/posts/2026-09-08-banner.jpeg[Viduke cracks the whip over a trembl
 
 [NOTE]
 ====
-This article was originally published in French on the https://blog.sciam.fr/2026/08/31/jai-fait-coder-mon-mac-tout-seul.html[SCIAM blog^] on 31 August 2026, under a CC BY-NC-SA 4.0 license. This is the author's own English translation. SCIAM sponsors the Vidocq project.
+This article was originally published in French on the https://blog.sciam.fr/2026/08/31/jai-fait-coder-mon-mac-tout-seul.html[SCIAM blog^] on 31 August 2026. This is the author's own English translation. SCIAM sponsors the Vidocq project.
 ====
 
 It overheated. It said silly things. And sometimes, it was right.
