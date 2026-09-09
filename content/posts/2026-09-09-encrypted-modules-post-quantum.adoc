@@ -125,6 +125,16 @@ image::/images/posts/sjar-post-quantum/key-delivery.svg[The key travels from gen
 
 The short checklist: key in a vault, never in an image; delivered over a hybrid-TLS or KMS-wrapped channel; landed in a keystore file rather than an env var where possible; rotated per release; signatures (if you need them) on ML-DSA.
 
+== Could the runtime itself resist memory scanning?
+
+A sharp reader will push the threat model one step further: if the decrypted bytecode lives in JVM memory, shouldn't the *real* fix be a runtime that cannot be scanned? Half of that exists today, and almost nobody turns it on.
+
+A JVM process exposes far more of its memory than it needs to. `jmap`, `jcmd` and heap dumps will happily serialize your decrypted classes for anyone with the same uid; a dynamically attached agent can do worse. All of that is closable right now: `-XX:+DisableAttachMechanism` shuts the attach interface, `-XX:-EnableDynamicAgentLoading` refuses runtime agents (the JDK has warned about them since JEP 451), JDWP stays off in production, and a launcher that marks itself non-dumpable (`prctl(PR_SET_DUMPABLE, 0)` on Linux) blocks both same-uid `ptrace` and core dumps in one syscall — with `kernel.yama.ptrace_scope` as the belt to those suspenders. None of this is exotic; it is just never assembled by default.
+
+What no userspace flag can do is stop root or the hypervisor — the kernel can always read `/proc/<pid>/mem`. The honest answer at that level is hardware: confidential computing (AMD SEV-SNP, Intel TDX, ARM CCA) runs an unmodified JVM inside a VM whose RAM is encrypted by the CPU itself, and every major cloud rents those machines today. SJAR inside a confidential VM is a genuinely tight story: internals opaque at rest, in distribution, *and* in memory — with the trust anchor moved to the silicon vendor, which is the fine print of that world.
+
+Between "a list of flags" and "a confidential VM" there is room for something we keep sketching on whiteboards: a hardened Vidocq runtime image — `jlink`-built from Eclipse Temurin, attach surface closed by default, a non-dumpable launcher that locks and zeroizes key material, the SJAR key provider wired straight to a KMS. Nothing about it is science fiction: OpenJDK's license permits it, a `jlink` image is not a fork, and Vidocq already leans on jlink for its distributions. If that sounds like something your deployment needs, tell us — the whiteboard is listening.
+
 == Is this really something no other MicroProfile runtime offers?
 
 We went looking, and as far as we can tell: no mainstream MicroProfile runtime ships encrypted-module loading as a built-in, supported feature. The existing answers to "I must ship readable-by-nobody Java code" are commercial obfuscators (which transform names but leave logic decompilable), custom encrypted classloaders (a classpath-era trick that predates modules and usually fights them), or compiling to a native image (a different trade-off entirely — and your reasons for wanting a JVM don't vanish).
