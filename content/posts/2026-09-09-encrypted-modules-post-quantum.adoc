@@ -1,6 +1,6 @@
 ---
 title: "Encrypted Modules in a Post-Quantum World"
-description: Vidocq can ship your application's internals as AES-256-GCM-encrypted modules. Here is how SJAR works, why quantum computers do not scare it, what it does not protect — and how to secure the key path when you deploy.
+description: Vidocq can ship your application's internals as AES-256-GCM-encrypted modules. Here is how SJAR works, why quantum computers do not scare it, what it does not protect, and how to secure the key path when you deploy.
 date: 2026-09-09
 layout: post
 authors: [yannblazart, antoinesabotdurand]
@@ -9,21 +9,21 @@ tags: [security, sjar, vauban, java-modules, post-quantum, cryptography]
 
 image::/images/posts/2026-09-09-banner.jpeg[Viduke stands guard in front of a giant vault door engraved with a padlock and circuit patterns, surrounded by floating padlocks and streams of hexadecimal digits,role=blog-banner]
 
-You wrote something valuable. Now you have to ship it to a machine you do not control: a customer's on-prem server, an edge box in a factory, an appliance that leaves your hands forever. From that moment, your jar is one `unzip` and one decompiler away from being an open book. Disk encryption does not help — it protects the disk, not the artifact once someone copies it.
+You wrote something valuable. Now you have to ship it to a machine you do not control: a customer's on-prem server, an edge box in a factory, an appliance that leaves your hands forever. From that moment, your jar is one `unzip` and one decompiler away from being an open book. Disk encryption does not help: it protects the disk, not the artifact once someone copies it.
 
-Vidocq has a built-in answer to this, and since we recently got asked "fine, but what about quantum computers?", this post does three things: explain how encrypted modules work, explain why the format is already post-quantum safe, and — the part most vendors skip — walk through what it does *not* protect and how to secure the rest of the chain when you deploy.
+Vidocq has a built-in answer to this, and since we recently got asked "fine, but what about quantum computers?", this post does three things: explain how encrypted modules work, explain why the format is already post-quantum safe, and, the part most vendors skip, walk through what it does *not* protect and how to secure the rest of the chain when you deploy.
 
 == The module boundary becomes the crypto boundary
 
-Java's module system already forces you to draw a line: `exports` what is public, keep the rest internal. SJAR — Vidocq's encrypted jar format, implemented in the `vauban-sjar` module — takes that line you already drew and makes it cryptographic. Everything your `module-info.java` does **not** export or open gets encrypted with AES-256-GCM: classes *and* resources. Everything you exported stays in clear, because it is your public API — people compile against it, reflection and CDI may need it, and hiding it would be pointless anyway.
+Java's module system already forces you to draw a line: `exports` what is public, keep the rest internal. SJAR, Vidocq's encrypted jar format implemented in the `vauban-sjar` module, takes that line you already drew and makes it cryptographic. Everything your `module-info.java` does **not** export or open gets encrypted with AES-256-GCM: classes *and* resources. Everything you exported stays in clear, because it is your public API: people compile against it, reflection and CDI may need it, and hiding it would be pointless anyway.
 
 image::/images/posts/sjar-post-quantum/jar-vault.jpeg[A glass jar shaped like a bank vault - sealed strongboxes tagged with hexadecimal labels fill most shelves, while a warmly lit display case near the mouth shows the public part]
 
-The current format goes one step further than encrypting bytes. An early version encrypted class contents but left the file names visible — and a zip listing that shows `io/acme/pricing/SecretRebateEngine.class.enc` leaks half of what you wanted to hide. The v2 format stores every internal entry as an opaque `META-INF/vauban/<uuid>` blob, with the real-name mapping itself living in an encrypted index. The only clear entries are a tiny bootstrap header, your `module-info.class`, and your exported packages. Someone listing the archive learns your module name and your public API — which the module system makes public by definition — and nothing else. Not a package name, not a class name, not a directory tree.
+The current format goes one step further than encrypting bytes. An early version encrypted class contents but left the file names visible, and a zip listing that shows `io/acme/pricing/SecretRebateEngine.class.enc` leaks half of what you wanted to hide. The v2 format stores every internal entry as an opaque `META-INF/vauban/<uuid>` blob, with the real-name mapping itself living in an encrypted index. The only clear entries are a tiny bootstrap header, your `module-info.class`, and your exported packages. Someone listing the archive learns your module name and your public API (which the module system makes public by definition) and nothing else. Not a package name, not a class name, not a directory tree.
 
-image::/images/posts/sjar-post-quantum/sjar-anatomy.svg[A modular jar goes through vauban:encrypt — exported packages and module-info stay clear, internal entries become UUID-named encrypted blobs plus an encrypted index]
+image::/images/posts/sjar-post-quantum/sjar-anatomy.svg[A modular jar goes through vauban:encrypt: exported packages and module-info stay clear, internal entries become UUID-named encrypted blobs plus an encrypted index]
 
-Producing one is a Maven goal (bound to the `package` phase) or a CLI call:
+Producing one is a Maven goal or a CLI call. The goal binds to the `package` phase and encrypts the packaged artifact in place; it takes the key from the `VAUBAN_SJAR_KEY` environment variable or `-Dvauban.sjar.key`:
 
 [source,xml]
 ----
@@ -38,15 +38,19 @@ Producing one is a Maven goal (bound to the `package` phase) or a CLI call:
 </plugin>
 ----
 
+The CLI lives in the exported `io.vidocq.vauban.sjar.cli` package (here `libs/` holds `vauban-sjar` and its `vauban-classloader-spi` dependency). `generate-key` prints a fresh 256-bit key as hex; `encrypt` requires the key in the environment and, without `--output`, writes `app.sjar` next to the input:
+
 [source,bash]
 ----
-sjar generate-key                                        # prints a fresh 256-bit key
-sjar encrypt --input app.jar --output app.jar --key-alias prod
+export VAUBAN_SJAR_KEY=$(java -p libs -m io.vidocq.vauban.sjar/io.vidocq.vauban.sjar.cli.SjarTool generate-key)
+
+java -p libs -m io.vidocq.vauban.sjar/io.vidocq.vauban.sjar.cli.SjarTool \
+     encrypt --input app.jar --key-alias prod
 ----
 
-At runtime nothing changes for your code. A plugin behind Vauban's classloader SPI detects the header, resolves the key — from the `VAUBAN_SJAR_KEY` environment variable, a PKCS12 keystore (`-Dvauban.sjar.keystore`), or a programmatic callback — and decrypts entries **in memory only**, handing the real bytecode to `defineClass` under its real name. Stack traces, reflection, annotations, CDI, the module system: all of them see `io.acme.pricing.SecretRebateEngine` exactly as before. Only the disk never does. Nothing decrypted is ever written back to storage.
+At runtime nothing changes for your code. A plugin behind Vauban's classloader SPI detects the header, resolves the key, from the `VAUBAN_SJAR_KEY` environment variable, a PKCS12 keystore (`-Dvauban.sjar.keystore`) or a programmatic callback, and decrypts entries **in memory only**, handing the real bytecode to `defineClass` under its real name. Stack traces, reflection, annotations, CDI, the module system: all of them see `io.acme.pricing.SecretRebateEngine` exactly as before. Only the disk never does. Nothing decrypted is ever written back to storage.
 
-image::/images/posts/sjar-post-quantum/sjar-runtime.svg[Sequence diagram — the Vauban classloader detects the SJAR header, resolves the AES key, decrypts index and blob in memory and defines the class under its real name]
+image::/images/posts/sjar-post-quantum/sjar-runtime.svg[Sequence diagram: the Vauban classloader detects the SJAR header, resolves the AES key, decrypts index and blob in memory and defines the class under its real name]
 
 And it is still a standard jar: it goes through Maven repositories, `jar tf` works, and downstream projects can compile against the exported API without any key.
 
@@ -54,9 +58,9 @@ And it is still a standard jar: it goes through Maven repositories, `jar tf` wor
 
 When people say "quantum computers break cryptography", they mean two very different algorithms with very different consequences.
 
-*Shor's algorithm* is the catastrophic one. On a large enough quantum computer it breaks RSA, ECDSA, ECDH and classic Diffie-Hellman outright — the asymmetric building blocks behind most TLS handshakes, jar signatures, and key exchanges. This is why NIST standardized post-quantum replacements (ML-KEM for key exchange, ML-DSA for signatures) and why the industry is migrating now: traffic recorded today can be decrypted the day the machine exists ("harvest now, decrypt later").
+*Shor's algorithm* is the catastrophic one. On a large enough quantum computer it breaks RSA, ECDSA, ECDH and classic Diffie-Hellman outright, the asymmetric building blocks behind most TLS handshakes, jar signatures, and key exchanges. This is why NIST standardized post-quantum replacements (ML-KEM for key exchange, ML-DSA for signatures) and why the industry is migrating now: traffic recorded today can be decrypted the day the machine exists ("harvest now, decrypt later").
 
-*Grover's algorithm* is the modest one. Against symmetric ciphers it only offers a quadratic speedup on brute force — it effectively halves the exponent. AES-256 drops to roughly 128-bit security, which remains far beyond any realistic attack. This is precisely why AES-256 (rather than AES-128) is the recommendation for post-quantum readiness, from NIST and ANSSI alike.
+*Grover's algorithm* is the modest one. Against symmetric ciphers it only offers a quadratic speedup on brute force: it effectively halves the exponent. AES-256 drops to roughly 128-bit security, which remains far beyond any realistic attack. This is precisely why AES-256 (rather than AES-128) is the recommendation for post-quantum readiness, from NIST and ANSSI alike.
 
 image::/images/posts/sjar-post-quantum/quantum-bored.jpeg[A huge ornate quantum machine slumps defeated in front of a small sturdy safe glowing calmly on a Parisian rooftop]
 
@@ -79,21 +83,21 @@ Now look at what SJAR is made of:
 |**Not used anywhere in the format**
 |===
 
-image::/images/posts/sjar-post-quantum/quantum-threats.svg[Shor breaks RSA and elliptic-curve crypto outright; Grover merely halves AES-256 to about 128-bit security — and SJAR only uses the symmetric column]
+image::/images/posts/sjar-post-quantum/quantum-threats.svg[Shor breaks RSA and elliptic-curve crypto outright; Grover merely halves AES-256 to about 128-bit security, and SJAR only uses the symmetric column]
 
-There is no asymmetric cryptography anywhere in the SJAR format — no wrapped keys, no embedded signatures, no key exchange. That is not a migration we performed; it is a property of the design doing *less*. A captured `.sjar` file contains nothing a future quantum computer can attack that a classical computer cannot: the only way in is the AES key, and Grover does not meaningfully open that door. Harvest-now-decrypt-later does not apply to the artifact itself.
+There is no asymmetric cryptography anywhere in the SJAR format: no wrapped keys, no embedded signatures, no key exchange. That is not a migration we performed; it is a property of the design doing *less*. A captured `.sjar` file contains nothing a future quantum computer can attack that a classical computer cannot: the only way in is the AES key, and Grover does not meaningfully open that door. Harvest-now-decrypt-later does not apply to the artifact itself.
 
-The asymmetric risk has not vanished, though. It has moved — to the channel that *delivers* the key. We will get there in a minute.
+The asymmetric risk has not vanished, though. It has moved to the channel that *delivers* the key. We will get there in a minute.
 
 == What SJAR does not protect
 
 This is the section every security-minded reader scrolls to, so let's be explicit rather than let you discover the fine print.
 
-**The runtime host must be trusted.** The key is present on the machine that runs the application — it has to be, or the classes cannot load. An attacker with root on that host, or the ability to attach a debugger or a JVM agent, can dump the decrypted bytecode from memory. No encryption scheme that ends with "and then the CPU executes the code" escapes this, whatever any vendor tells you. SJAR is not DRM.
+**The runtime host must be trusted.** The key is present on the machine that runs the application; it has to be, or the classes cannot load. An attacker with root on that host, or the ability to attach a debugger or a JVM agent, can dump the decrypted bytecode from memory. No encryption scheme that ends with "and then the CPU executes the code" escapes this, whatever any vendor tells you. SJAR is not DRM.
 
 **It protects code at rest and in distribution, not in execution.** The honest threat model: a copied artifact, a leaked backup, a snooped Maven repository, a decommissioned disk, a curious admin on a file server, a partner who received your jar for integration. Against those, the internals are opaque. Against a compromised production host, they are not.
 
-**Your public API stays public.** Exported packages are clear by design. If your secret sauce is in an exported class, export less — the tool follows your module boundary; it cannot invent one.
+**Your public API stays public.** Exported packages are clear by design. If your secret sauce is in an exported class, export less: the tool follows your module boundary; it cannot invent one.
 
 **It only works on modular jars.** No `module-info.class`, no SJAR. In the Vidocq ecosystem everything is modular anyway, but it is worth stating.
 
@@ -105,7 +109,7 @@ In table form:
 |===
 |What you gain |What you must accept
 
-|Internals unreadable in any copied, mirrored or archived artifact — names included
+|Internals unreadable in any copied, mirrored or archived artifact, names included
 |A compromised runtime host can still recover bytecode from memory
 
 |Zero code change, real class names at runtime, standard jar tooling intact
@@ -121,13 +125,13 @@ Since the format itself is solid, the game is entirely about the key's journey: 
 
 image::/images/posts/sjar-post-quantum/key-delivery.svg[The key travels from generation to a vault, then over a post-quantum-safe channel to the deployment host, into a keystore or environment variable, and finally to the runtime which decrypts in memory]
 
-**Generate and store.** `sjar generate-key` gives you a 256-bit key. It never goes in git, an image, or a compose file. Put it in a real secret store — Vault, a cloud KMS, an HSM — and rotate per release if artifacts have different sensitivity lifetimes.
+**Generate and store.** `sjar generate-key` gives you a 256-bit key. It never goes in git, an image, or a compose file. Put it in a real secret store (Vault, a cloud KMS, an HSM) and rotate per release if artifacts have different sensitivity lifetimes.
 
-**Deliver — the actual post-quantum hop.** If the key travels from your vault to the host over classical TLS, *that* handshake is the harvest-now-decrypt-later target, not the sjar. The Java side of this story is moving fast: JDK 24 shipped the ML-KEM and ML-DSA primitives (JEP 496 and 497), and TLS 1.3 hybrid key exchange (`X25519MLKEM768`, preferred by default) lands with JEP 527 in JDK 27 — released this month. Until your whole fleet negotiates hybrid TLS, two pragmatic options: terminate the sensitive hop on infrastructure that already speaks hybrid key exchange (recent OpenSSL-based proxies and most cloud KMS endpoints do), or let the KMS wrap the key so the raw key never rides the network at all.
+**Deliver: the actual post-quantum hop.** If the key travels from your vault to the host over classical TLS, *that* handshake is the harvest-now-decrypt-later target, not the sjar. The Java side of this story is moving fast: JDK 24 shipped the ML-KEM and ML-DSA primitives (JEP 496 and 497), and TLS 1.3 hybrid key exchange (`X25519MLKEM768`, preferred by default) lands with JEP 527 in JDK 27, released this month. Until your whole fleet negotiates hybrid TLS, two pragmatic options: terminate the sensitive hop on infrastructure that already speaks hybrid key exchange (recent OpenSSL-based proxies and most cloud KMS endpoints do), or let the KMS wrap the key so the raw key never rides the network at all.
 
-**Use on the host.** Prefer the PKCS12 keystore over the environment variable when you can: a keystore file can be `chmod 600` on a `tmpfs` mount, delivered by systemd `LoadCredential` or a container secret, while an environment variable is readable in `/proc/<pid>/environ` by any same-uid process, inherited by every child process, and has a talent for showing up in diagnostic dumps. The env var channel exists because it is universal — treat it as the portable option, not the hardened one.
+**Use on the host.** Prefer the PKCS12 keystore over the environment variable when you can: a keystore file can be `chmod 600` on a `tmpfs` mount, delivered by systemd `LoadCredential` or a container secret, while an environment variable is readable in `/proc/<pid>/environ` by any same-uid process, inherited by every child process, and has a talent for showing up in diagnostic dumps. The env var channel exists because it is universal: treat it as the portable option, not the hardened one.
 
-**Authenticity is a separate axis.** Encryption hides; it does not vouch. GCM guarantees the content matches the key, but not who built the artifact. If you need provenance, sign the jar — and note that `jarsigner` and `keytool` already support ML-DSA, so your signatures can be post-quantum today even before your TLS is.
+**Authenticity is a separate axis.** Encryption hides; it does not vouch. GCM guarantees the content matches the key, but not who built the artifact. If you need provenance, sign the jar, and note that `jarsigner` and `keytool` already support ML-DSA, so your signatures can be post-quantum today even before your TLS is.
 
 The short checklist: key in a vault, never in an image; delivered over a hybrid-TLS or KMS-wrapped channel; landed in a keystore file rather than an env var where possible; rotated per release; signatures (if you need them) on ML-DSA.
 
@@ -135,36 +139,36 @@ The short checklist: key in a vault, never in an image; delivered over a hybrid-
 
 A sharp reader will push the threat model one step further: if the decrypted bytecode lives in JVM memory, shouldn't the *real* fix be a runtime that cannot be scanned? Half of that exists today, and almost nobody turns it on.
 
-A JVM process exposes far more of its memory than it needs to. `jmap`, `jcmd` and heap dumps will happily serialize your decrypted classes for anyone with the same uid; a dynamically attached agent can do worse. All of that is closable right now: `-XX:+DisableAttachMechanism` shuts the attach interface, `-XX:-EnableDynamicAgentLoading` refuses runtime agents (the JDK has warned about them since JEP 451), JDWP stays off in production, and a launcher that marks itself non-dumpable (`prctl(PR_SET_DUMPABLE, 0)` on Linux) blocks both same-uid `ptrace` and core dumps in one syscall — with `kernel.yama.ptrace_scope` as the belt to those suspenders. None of this is exotic; it is just never assembled by default.
+A JVM process exposes far more of its memory than it needs to. `jmap`, `jcmd` and heap dumps will happily serialize your decrypted classes for anyone with the same uid; a dynamically attached agent can do worse. All of that is closable right now: `-XX:+DisableAttachMechanism` shuts the attach interface, `-XX:-EnableDynamicAgentLoading` refuses runtime agents (the JDK has warned about them since JEP 451), JDWP stays off in production, and a launcher that marks itself non-dumpable (`prctl(PR_SET_DUMPABLE, 0)` on Linux) blocks both same-uid `ptrace` and core dumps in one syscall, with `kernel.yama.ptrace_scope` as the belt to those suspenders. None of this is exotic; it is just never assembled by default.
 
-== With Vidocq, `jlink` is easy — and it can protect you
+== With Vidocq, `jlink` is easy and it can protect you
 
-Time to say the quiet part loudly, because this one is a genuine Vidocq advantage. `jlink` — the JDK tool that builds a custom runtime image containing only the modules your application actually needs — has been in the JDK since Java 9, and most of the industry still cannot use it. The reason is prosaic: `jlink` demands that *every* jar on the module path be a real module with a `module-info`. One automatic module — one dependency whose maintainers never wrote a module descriptor — and the tool refuses. The classic Java stack being a classpath of a hundred jars, `jlink` stayed a curiosity.
+Time to say the quiet part loudly, because this one is a genuine Vidocq advantage. `jlink`, the JDK tool that builds a custom runtime image containing only the modules your application actually needs, has been in the JDK since Java 9, and most of the industry still cannot use it. The reason is prosaic: `jlink` demands that *every* jar on the module path be a real module with a `module-info`. One automatic module (one dependency whose maintainers never wrote a module descriptor) and the tool refuses. The classic Java stack being a classpath of a hundred jars, `jlink` stayed a curiosity.
 
-Vidocq does not have that problem, by construction. Every brick in the ecosystem is strict JPMS with a hand-written `module-info`, there are no third-party dependencies to poison the module graph, and the tooling already computes the transitive module closure for you. Building a trimmed runtime image of a Vidocq application is not a heroic modularization project — it is simply the natural way to ship one.
+Vidocq does not have that problem, by construction. Every brick in the ecosystem is strict JPMS with a hand-written `module-info`, there are no third-party dependencies to poison the module graph, and the tooling already computes the transitive module closure for you. Building a trimmed runtime image of a Vidocq application is not a heroic modularization project; it is simply the natural way to ship one.
 
 image::/images/posts/sjar-post-quantum/jlink-packing.jpeg[Viduke packs three gleaming tools into a slim travel case while a huge cluttered toolbox is left behind on the workbench]
 
-And that image is a security control in its own right, because it attacks the memory problem from a direction no flag can: it removes the attacker's toolbox instead of just locking it. A `jlink` image ships no `jmap`, no `jcmd`, no `jstack`, no `jdb`, no compiler on the target host. An intruder who lands on the machine finds nothing to "live off the land" with: the flags above close the attach *interface*, and the trimmed image ensures the attach *tooling* was never installed in the first place. It also shrinks the memory-disclosure surface in quieter ways — `--strip-debug` drops the debug symbols that make navigating a memory dump comfortable, and fewer modules simply means fewer pages of your address space explaining themselves to a scanner. And one bonus that matters for the next section: a `jlink` image is a fixed, self-contained artifact with a stable measurement, exactly the kind of thing attestation-based systems like to verify. Vidocq is strict-JPMS from top to bottom precisely so that all of this works out of the box — this is where that discipline pays off in security currency.
+And that image is a security control in its own right, because it attacks the memory problem from a direction no flag can: it removes the attacker's toolbox instead of just locking it. A `jlink` image ships no `jmap`, no `jcmd`, no `jstack`, no `jdb`, no compiler on the target host. An intruder who lands on the machine finds nothing to "live off the land" with: the flags above close the attach *interface*, and the trimmed image ensures the attach *tooling* was never installed in the first place. It also shrinks the memory-disclosure surface in quieter ways: `--strip-debug` drops the debug symbols that make navigating a memory dump comfortable, and fewer modules simply means fewer pages of your address space explaining themselves to a scanner. And one bonus that matters for the next section: a `jlink` image is a fixed, self-contained artifact with a stable measurement, exactly the kind of thing attestation-based systems like to verify. Vidocq is strict-JPMS from top to bottom precisely so that all of this works out of the box; this is where that discipline pays off in security currency.
 
 == When the attacker is root: confidential computing
 
-What no userspace flag — and no trimmed image — can do is stop root or the hypervisor — the kernel can always read `/proc/<pid>/mem`. The honest answer at that level is hardware: confidential computing (AMD SEV-SNP, Intel TDX, ARM CCA) runs an unmodified JVM inside a VM whose RAM is encrypted by the CPU itself, and every major cloud rents those machines today. SJAR inside a confidential VM is a genuinely tight story: internals opaque at rest, in distribution, *and* in memory — with the trust anchor moved to the silicon vendor, which is the fine print of that world.
+What no userspace flag and no trimmed image can stop is root or the hypervisor: the kernel can always read `/proc/<pid>/mem`. The honest answer at that level is hardware: confidential computing (AMD SEV-SNP, Intel TDX, ARM CCA) runs an unmodified JVM inside a VM whose RAM is encrypted by the CPU itself, and every major cloud rents those machines today. SJAR inside a confidential VM is a genuinely tight story: internals opaque at rest, in distribution, *and* in memory, with the trust anchor moved to the silicon vendor, which is the fine print of that world.
 
-And you do not have to re-platform to VMs to get there. https://confidentialcontainers.org/[Confidential Containers^] (a CNCF project built on https://katacontainers.io/[Kata Containers^]) wraps each Kubernetes pod in its own hardware-encrypted micro-VM, so a containerized Vidocq application gets TEE protection without changing a line of its deployment manifests; managed flavors exist today, such as https://learn.microsoft.com/en-us/azure/aks/confidential-containers-overview[confidential containers on AKS^]. The piece that ties the whole post together is *attested key release*: in these setups the KMS hands out a secret only after the enclave proves cryptographically what it is running. Point the SJAR key provider at such a KMS and the loop closes — the key that decrypts your modules is only ever released into a measured, memory-encrypted environment, and never touches a host that cannot prove itself.
+And you do not have to re-platform to VMs to get there. https://confidentialcontainers.org/[Confidential Containers^] (a CNCF project built on https://katacontainers.io/[Kata Containers^]) wraps each Kubernetes pod in its own hardware-encrypted micro-VM, so a containerized Vidocq application gets TEE protection without changing a line of its deployment manifests; managed flavors exist today, such as https://learn.microsoft.com/en-us/azure/aks/confidential-containers-overview[confidential containers on AKS^]. The piece that ties the whole post together is *attested key release*: in these setups the KMS hands out a secret only after the enclave proves cryptographically what it is running. Point the SJAR key provider at such a KMS and the loop closes: the key that decrypts your modules is only ever released into a measured, memory-encrypted environment, and never touches a host that cannot prove itself.
 
 image::/images/posts/sjar-post-quantum/confidential-containers.jpeg[Shipping containers on a Parisian rooftop dock, each inside its own translucent protective bubble, while a crane lowers a glowing key toward one of them]
 
-Between "a list of flags" and "a confidential VM" there is room for something we keep sketching on whiteboards: a hardened Vidocq runtime image — `jlink`-built from Eclipse Temurin, attach surface closed by default, a non-dumpable launcher that locks and zeroizes key material, the SJAR key provider wired straight to a KMS. Nothing about it is science fiction: OpenJDK's license permits it, a `jlink` image is not a fork, and Vidocq already leans on jlink for its distributions. If that sounds like something your deployment needs, tell us — the whiteboard is listening.
+Between "a list of flags" and "a confidential VM" there is room for something we keep sketching on whiteboards: a hardened Vidocq runtime image: `jlink`-built from Eclipse Temurin, attach surface closed by default, a non-dumpable launcher that locks and zeroizes key material, the SJAR key provider wired straight to a KMS. Nothing about it is science fiction: OpenJDK's license permits it, a `jlink` image is not a fork, and Vidocq already leans on jlink for its distributions. If that sounds like something your deployment needs, tell us, the whiteboard is listening.
 
 == Is this really something no other MicroProfile runtime offers?
 
-We went looking, and as far as we can tell: no mainstream MicroProfile runtime ships encrypted-module loading as a built-in, supported feature. The existing answers to "I must ship readable-by-nobody Java code" are commercial obfuscators (which transform names but leave logic decompilable), custom encrypted classloaders (a classpath-era trick that predates modules and usually fights them), or compiling to a native image (a different trade-off entirely — and your reasons for wanting a JVM don't vanish).
+We went looking, and as far as we can tell: no mainstream MicroProfile runtime ships encrypted-module loading as a built-in, supported feature. The existing answers to "I must ship readable-by-nobody Java code" are commercial obfuscators (which transform names but leave logic decompilable), custom encrypted classloaders (a classpath-era trick that predates modules and usually fights them), or compiling to a native image (a different trade-off entirely, and your reasons for wanting a JVM don't vanish).
 
-What makes the Vidocq/Vauban approach different is not the AES — it is the integration: the *module system* defines what is secret, the classloader layer makes decryption transparent, and the whole thing is zero-dependency JDK crypto. So yes, we believe the claim holds — stated precisely: **built-in, at-rest and in-distribution protection of your application internals, driven by module boundaries, in a standard jar**. It is not runtime protection against a hostile host, and we will keep saying so ourselves before someone else does. If you know another MicroProfile runtime that ships this out of the box, genuinely: tell us, we would love to compare notes.
+What makes the Vidocq/Vauban approach different is not the AES, it is the integration: the *module system* defines what is secret, the classloader layer makes decryption transparent, and the whole thing is zero-dependency JDK crypto. So yes, we believe the claim holds, stated precisely: **built-in, at-rest and in-distribution protection of your application internals, driven by module boundaries, in a standard jar**. It is not runtime protection against a hostile host, and we will keep saying so ourselves before someone else does. If you know another MicroProfile runtime that ships this out of the box, genuinely: tell us, we would love to compare notes.
 
 == Takeaways
 
-Draw your module boundary well, and Vidocq can make it a cryptographic one — with a format that a future quantum computer finds exactly as boring as a present-day one does. Spend your worry budget where it belongs: on the key path, which is ordinary, well-understood operational security. And read vendor claims (ours included) with the threat model next to them.
+Draw your module boundary well, and Vidocq can make it a cryptographic one, with a format that a future quantum computer finds exactly as boring as a present-day one does. Spend your worry budget where it belongs: on the key path, which is ordinary, well-understood operational security. And read vendor claims (ours included) with the threat model next to them.
 
-The SJAR format lives in the `vauban-sjar` module; the Maven goal and key options are covered in https://doc.vidocq.dev[the reference documentation^]. Questions, corrections, war stories about shipping code to hostile places — the discussion is open on https://codefloe.com/Vidocq[our forge^].
+The SJAR format lives in the `vauban-sjar` module. The `vauban:encrypt` goal is documented in the https://doc.vidocq.dev/vauban/reference.html#maven-plugin-goals[vauban Maven plugin reference^], and the classloader plugin architecture that reads the format back is described on the https://doc.vidocq.dev/vauban/internals.html#class-loading[vauban internals page^]. Questions, corrections, war stories about shipping code to hostile places: the discussion is open on https://codefloe.com/Vidocq[our forge^].
