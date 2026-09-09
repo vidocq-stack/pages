@@ -23,7 +23,9 @@ The current format goes one step further than encrypting bytes. An early version
 
 image::/images/posts/sjar-post-quantum/sjar-anatomy.svg[A modular jar goes through vauban:encrypt: exported packages and module-info stay clear, internal entries become UUID-named encrypted blobs plus an encrypted index]
 
-Producing one is a Maven goal or a CLI call. The goal binds to the `package` phase and encrypts the packaged artifact in place; it takes the key from the `VAUBAN_SJAR_KEY` environment variable or `-Dvauban.sjar.key`:
+There are two ways to produce one, depending on *whose* jar you are encrypting.
+
+**Your own module: the Maven goal.** For the artifact your build produces, add the `vauban:encrypt` goal. It binds to the `package` phase and encrypts your project's jar in place, taking the key from the `VAUBAN_SJAR_KEY` environment variable or `-Dvauban.sjar.key`. Nothing else in your build changes:
 
 [source,xml]
 ----
@@ -38,15 +40,17 @@ Producing one is a Maven goal or a CLI call. The goal binds to the `package` pha
 </plugin>
 ----
 
-The CLI lives in the exported `io.vidocq.vauban.sjar.cli` package (here `libs/` holds `vauban-sjar` and its `vauban-classloader-spi` dependency). `generate-key` prints a fresh 256-bit key as hex; `encrypt` requires the key in the environment and, without `--output`, writes `app.sjar` next to the input:
+**An external jar: the CLI.** When the jar is not the one your reactor builds, a third-party module you want to protect, or one produced by another pipeline, the goal does not apply (it only ever touches the current project's own artifact). For that case the `vauban-sjar` module ships a small CLI in its exported `io.vidocq.vauban.sjar.cli` package. The key is any 256-bit hex value (`openssl rand -hex 32` is enough), and `encrypt`, without `--output`, writes `app.sjar` next to the input:
 
 [source,bash]
 ----
-export VAUBAN_SJAR_KEY=$(java -p libs -m io.vidocq.vauban.sjar/io.vidocq.vauban.sjar.cli.SjarTool generate-key)
+export VAUBAN_SJAR_KEY=$(openssl rand -hex 32)
 
 java -p libs -m io.vidocq.vauban.sjar/io.vidocq.vauban.sjar.cli.SjarTool \
      encrypt --input app.jar --key-alias prod
 ----
+
+That `java -m` incantation is more ceremony than it should be, and encrypting external jars from Maven would be nicer still. Both are on the roadmap: for 0.4.0 we plan to extend `vauban:encrypt` to encrypt named external jars, not just the project's own artifact (https://codefloe.com/Vidocq/vauban/issues/41[vauban#41^]).
 
 At runtime nothing changes for your code. A plugin behind Vauban's classloader SPI detects the header, resolves the key, from the `VAUBAN_SJAR_KEY` environment variable, a PKCS12 keystore (`-Dvauban.sjar.keystore`) or a programmatic callback, and decrypts entries **in memory only**, handing the real bytecode to `defineClass` under its real name. Stack traces, reflection, annotations, CDI, the module system: all of them see `io.acme.pricing.SecretRebateEngine` exactly as before. Only the disk never does. Nothing decrypted is ever written back to storage.
 
