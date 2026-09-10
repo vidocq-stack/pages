@@ -1,7 +1,7 @@
 ---
 title: "Vidocq Runtime Is Jakarta EE Core Profile 11 Certified"
 description: The Jakarta EE Specification Committee has approved our compatibility certification request — Vidocq Runtime 0.3.0 is now a certified Jakarta EE Core Profile 11 compatible implementation.
-date: 2026-09-01
+date: 2026-09-09
 layout: post
 authors: [yannblazart, antoinesabotdurand]
 tags: [certification, jakarta-ee, core-profile, tck]
