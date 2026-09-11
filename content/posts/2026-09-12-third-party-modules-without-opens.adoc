@@ -1,0 +1,184 @@
+---
+title: "Third-Party Modules Without opens: Putting a CDI Proxy Where It Must Live"
+description: Producing a type from a CDI-agnostic module sometimes forces the client proxy inside someone else's package. That normally costs an opens. Here is how Vauban's class loader puts the proxy there instead, why your main method has to move, and what the trick still cannot do.
+date: 2026-09-12
+layout: post
+authors: [yannblazart, antoinesabotdurand]
+tags: [cdi, java-modules, vauban, deep-dive, java]
+---
+
+image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+
+You depend on a library that knows nothing about CDI. A connection pool, a payment gateway, a fraud
+screen — plain Java, a strict module, `exports` and nothing else. You want it as a bean, so you write
+the four lines everyone writes:
+
+[source,java]
+----
+@ApplicationScoped
+public class Integrations {
+
+    @Produces
+    @ApplicationScoped
+    public FraudScreen fraudScreen() {
+        return new FraudScreen(10_000);
+    }
+}
+----
+
+On the class path this works and nobody thinks about it again. On the module path it can stop dead,
+with the container asking you to add an `opens` to a module you do not own. This is
+https://github.com/jakartaee/cdi/issues/1015[jakartaee/cdi#1015^], and it is not a bug in your
+build: it falls out of what a client proxy *is*.
+
+== Why a proxy sometimes has to live in someone else's package
+
+A normal-scoped bean is never handed out directly. The container returns a client proxy, a generated
+subclass that forwards every business method to the contextual instance. Forwarding is the operative
+word: the proxy holds a reference to the real object and calls methods *on that other object*.
+
+Two rules of the Java language decide where that subclass may live.
+
+A package-private method can only be overridden from the same runtime package. And a `protected`
+method can be overridden from anywhere, but
+https://docs.oracle.com/javase/specs/jls/se25/html/jls-6.html#jls-6.6.2[JLS §6.6.2^] forbids calling
+it on *another instance* from outside the declaring package — which is exactly what forwarding does.
+
+Now read CDI 4.1 §3.10, the list of unproxyable types. It says a class with a non-static `final`
+method cannot be proxied, and it does not restrict that to public methods. A `final`
+package-private method makes a type unproxyable. That sentence only makes sense if the container is
+expected to override non-final package-private methods — which it can only do from inside the
+package. The specification quietly requires the proxy to sit in the proxied type's package, and that
+requirement is the whole of #1015.
+
+So the question is not "how do I avoid the proxy", it is "how does a class get defined into a
+package that belongs to somebody else, without asking them to open it".
+
+== The ladder, from free to impossible
+
+Not every produced type needs that. Vauban sorts them at compile time:
+
+[cols="1,2"]
+|===
+|The produced type |What the build does
+
+|A fully public class, or an interface
+|The proxy is generated at build time in *your* package. It forwards public members through the
+public API. Zero `opens`, nothing at runtime.
+
+|A package-private or `protected` overridable member, or no accessible constructor
+|The proxy has to be co-located with the type. This is the hard case.
+
+|`final` or `sealed` class, a non-private `final` instance method, abstract class
+|Unproxyable anywhere, by the specification. A deployment error, and no trick changes that.
+|===
+
+The hard case used to leave you three options, all unpleasant: ask the library author to open a
+package, add `--add-opens` on every command line forever, or let the container self-attach an agent
+and open the module at boot. The last one works, but attaching an agent at runtime is exactly what
+integrity by default is closing down, so in Vauban it is opt-in and loudly announced.
+
+== Placement: the loader defines the proxy into the package
+
+There is a fourth door, and it has been in the platform all along. `opens` governs *reflective*
+access across modules. It has nothing to say about a class loader defining a class. A loader that
+defined a module owns its packages, and it may define more classes into them.
+
+So the build ships the co-located proxy as a *resource* of your own bean archive,
+`META-INF/vauban/placed/<pkg>/<Type>_ClientProxy.class`, next to a manifest listing which types need
+it. At runtime, if the library module was defined by a Vauban class loader, that loader defines the
+proxy into the library's package on the first lookup miss. Zero `opens`, no agent, no rewritten jar.
+The library is used exactly as its author shipped it, signature intact.
+
+The second half of the trick is that the proxy must not run the third-party constructor. As it
+defines the produced type, the loader weaves a synthetic, side-effect-free entry constructor into it,
+and points the placed proxy at that one. Creating a proxy therefore allocates no pool, opens no
+socket, and increments no counter in a class you did not write.
+
+== Why your `main` has to move
+
+For the loader to own the library's package, the library has to be loaded by a Vauban layer. In a
+Jakarta EE server that is the deployment's business. In plain Java SE there is no such thing, so
+Vauban ships a launcher — and the application's entry point has to run *inside* the layer.
+
+That is not an implementation detail we could hide inside `SeContainerInitializer.initialize()`. A
+class is identified by its name *and its loader*. A `Main` left in the boot layer holds the boot
+layer's `FraudScreen.class`, while the placed proxy extends the layer's `FraudScreen`. Ask for the
+first and you get an instance of the second: `ClassCastException`, and a confusing one.
+
+So the entry point re-enters itself, once:
+
+[source,java]
+----
+public static void main(String[] args) throws Throwable {
+    if (Launch.run("com.acme.app/com.acme.app.Main", args)) {
+        return; // this call re-launched us inside a Vauban layer; we are done here
+    }
+    try (SeContainer container = SeContainerInitializer.newInstance()
+            .addBeanClasses(Integrations.class, CheckoutService.class)
+            .initialize()) {
+        // … the application, now running inside the layer
+    }
+}
+----
+
+`Launch.run` returns `true` when it ran the target in a fresh layer, and `false` — doing nothing —
+when the caller already runs in one. Your command line does not change: `java -p mods -m
+com.acme.app/com.acme.app.Main`. If you prefer to invoke the launcher as the main module instead, add
+`--add-modules ALL-MODULE-PATH`, because with `-m` the launcher would otherwise be the only root and
+there would be nothing to re-layer.
+
+== Which modules move, and why some must not
+
+Re-layering is not "take everything". A module stays in the boot layer when moving it would break
+something:
+
+* the platform, Jakarta and container modules, which the re-layered code reads from there;
+* automatic modules, because a re-layered automatic module reads its own boot-layer twin and
+  resolution fails;
+* modules owning a `javax.`, `sun.` or `com.sun.` package, which a Vauban loader refuses to define;
+* whatever you name in `-Dvauban.launch.keep`, for a test framework or an agent-attached library;
+* and, transitively, everything a kept module reads — a kept module cannot read a re-layered one.
+
+Everything else moves, including the CDI-agnostic library whose proxy you need. Your own module is a
+*root*: no keep prefix holds it back, nor, through it, what it reads.
+
+That policy is one method, `VaubanLayerFactory.applicationPaths(configuration, keptPrefixes, roots)`,
+and since last night it is the *only* one: the Vidocq runtime's `Vidocq.run` trampoline applies it
+too, with the Vidocq bricks as extra kept prefixes. Before that, the runtime re-layered only modules
+carrying a bean index, so a CDI-agnostic library stayed behind and its proxies were never placed. Two
+policies drifting apart is how a feature quietly stops working in one of the two doors that lead to
+it.
+
+== What it still cannot do
+
+Placement replaces the `opens`, never the `exports`. The container instantiates the placed proxy from
+its own module, so the produced type's package must still be exported. A library that exports nothing
+falls back to the documented levers, and the container says so at boot rather than failing later at
+an injection point. Types that are unproxyable per the specification stay deployment errors. And a
+type in a module the launcher had to keep cannot be placed either, for the reason above.
+
+== A closing war story, for the people who generate bytecode
+
+Shipping this, we found that our own generated classes had a version problem. The Class-File API
+writes a new class at the version of the JDK that *runs the build*. Compile with `--release 25` on a
+JDK 26 and javac writes class file 69 while your generator writes 70, into the same jar. The result
+is an artifact that refuses to load on the runtime you compiled for, and a `jlink` image that cannot
+be built at all.
+
+The rule we settled on, if you write code that writes classes: pin generated class files to the
+project's release, never to the running JDK, and when you *patch* an existing class, hand back the
+version it came with. Both are one line, and both are invisible until someone builds on a newer JDK.
+
+== Try it
+
+The runnable example lives in the Vauban repository:
+https://codefloe.com/Vidocq/vauban/src/branch/main/vauban-examples/example-cdi1015-app[example-cdi1015-app^].
+It produces four types from a CDI-agnostic module — a public class, an interface, a class with a
+package-private member, and a class with no accessible constructor — and prints where each proxy
+ended up. The full story is on the
+https://doc.vidocq.dev/vauban/dev/se.html[Vauban in Java SE^] page, and the strategy table is in the
+https://doc.vidocq.dev/vauban/dev/internals.html#proxy-strategies[internals^].
+
+Questions, objections, or a case we have not covered: the discussion is open on
+https://codefloe.com/Vidocq[our forge^].
