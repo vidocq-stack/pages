@@ -430,6 +430,82 @@ Both paths end with the same bytecode. The difference is that the first one need
 matters as the platform keeps closing dynamic attachment down. Delegating the IDE build to Maven also
 removes the problem at the source, since then javac writes the classes last.
 
+== What you actually see
+
+Every tier above leaves a trace. Knowing which one you are looking at is most of the diagnosis.
+
+**The build tells you when a proxy had to be shipped rather than generated in your own package.**
+The annotation processor names the obstacle for the module it compiles, and the Maven plugin does
+the same for dependency archives:
+
+[source,text]
+----
+[Vauban] Producer of com.acme.lib.FraudScreen needs its client proxy inside com.acme.lib
+(PACKAGE_PRIVATE_VIRTUALS). Its co-located proxy is shipped under META-INF/vauban/placed/ and the
+Vauban class loader defines it there when the application runs in a Vauban layer — zero opens, no
+agent: start through io.vidocq.vauban.classloader.Launch (or Vauban.run). […]
+----
+
+**The layer announces itself**, with the modules that moved into it:
+
+[source,text]
+----
+INFO Vauban layer ready: [com.acme.app, com.acme.lib]
+----
+
+**Without a layer, the container refuses to open anything behind your back** and lists every way
+out, in order of preference:
+
+[source,text]
+----
+WARNING Vauban needs package com.acme.lib of module com.acme.lib opened to io.vidocq.vauban.core
+for a runtime producer proxy, and will not do it on its own. Pick one: start the application through
+io.vidocq.vauban.classloader.Launch (in a Vauban layer the loader defines the shipped proxy inside
+the package itself — zero opens, no agent); make the produced type fully public […]; run the
+vauban:enhance-dependencies goal […]; add the matching `opens … to io.vidocq.vauban.core;`; or, as a
+last resort, set -Dvauban.opens.auto=true […]
+----
+
+**Ignore it and the boot fails**, with the whole chain named rather than a bare access error:
+
+[source,text]
+----
+jakarta.enterprise.inject.spi.DeploymentException: Failed to create client proxy for normal-scoped
+bean com.acme.Integrations
+  Caused by: RuntimeException: Failed to define proxy class for class com.acme.lib.FraudScreen
+  Caused by: RuntimeException: Cannot reflectively access com.acme.lib.FraudScreen on the module
+      path. Either (preferred) provide a generated VaubanComponentProvider for its module […] or
+      open the package: `opens com.acme.lib to io.vidocq.vauban.core;`
+  Caused by: IllegalAccessException: module com.acme.lib does not open com.acme.lib to module
+      io.vidocq.vauban.core
+----
+
+**Some shapes no tier can rescue.** A final class, a final method, a private-only constructor: CDI
+4.1 §3.10 rules them out wherever the proxy sits, so the container stops at boot with one line per
+problem:
+
+[source,text]
+----
+CDI deployment validation failed:
+  - Normal-scoped bean com.acme.Ledger cannot be a final class
+  - Normal-scoped bean com.acme.Report has final method render
+  - Normal-scoped bean com.acme.Session must have a non-private no-arg constructor, or declare a
+    non-private constructor taking io.vidocq.vauban.api.ProxyLink as its client-proxy entry point
+----
+
+There is no flag to force those through, on purpose. Change the type, or produce an interface, which
+carries none of these constraints.
+
+**In an IDE**, finally, the line that tells you the agent was needed:
+
+[source,text]
+----
+WARNING Build output is not woven for 3 normal-scoped bean(s) [...] — attaching the Vauban load-time
+weaving agent (typical of IDE builds; Maven/Gradle/javac builds weave at compile time). Disable with
+-Dvauban.weaving.loadtime=disabled. Hint: a trampoline main that re-layers the application (Vidocq:
+@VidocqMain + Vidocq.run) avoids the agent entirely
+----
+
 == Checking it yourself
 
 Everything above leaves evidence on disk. After a build:
