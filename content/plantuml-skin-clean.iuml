@@ -1,0 +1,40 @@
+' Vidocq site — clean PlantUML skin (no sketchy theme, no handwritten style)
+' Same EU-blue palette as plantuml-skin.iuml, but with straight lines and a
+' normal font. Use it for technical diagrams where legibility matters more
+' than the hand-drawn look: include::../plantuml-skin-clean.iuml[] right
+' after the @start line.
+
+skinparam backgroundColor transparent
+skinparam defaultTextAlignment center
+skinparam defaultFontSize 13
+skinparam defaultFontName "Helvetica,Arial,sans-serif"
+skinparam padding 6
+skinparam shadowing false
+skinparam roundCorner 8
+
+' EU Blue palette
+skinparam ArrowColor #1d4ed8
+skinparam ArrowFontColor #374151
+
+skinparam RectangleBorderColor #1e40af
+skinparam RectangleBackgroundColor #eff6ff
+skinparam RectangleFontColor #1e3a8a
+
+skinparam NoteBackgroundColor #eff6ff
+skinparam NoteBorderColor #bfdbfe
+skinparam NoteFontColor #1e3a8a
+
+skinparam ParticipantBorderColor #1e40af
+skinparam ParticipantBackgroundColor #dbeafe
+skinparam ParticipantFontColor #1e3a8a
+skinparam SequenceLifeLineBorderColor #93c5fd
+skinparam SequenceGroupBorderColor #1e40af
+skinparam SequenceGroupHeaderFontColor #1e40af
+
+skinparam ActorBorderColor #1e40af
+skinparam ActorBackgroundColor #dbeafe
+skinparam ActorFontColor #1e3a8a
+
+skinparam ComponentBorderColor #1e40af
+skinparam ComponentBackgroundColor #eff6ff
+skinparam ComponentFontColor #1e3a8a

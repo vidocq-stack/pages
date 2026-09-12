@@ -26,8 +26,7 @@ previous one cannot reach.
 [plantuml, diag-vauban-tiers, format=svg]
 ----
 @startuml
-!option handwritten true
-include::../plantuml-skin.iuml[]
+include::../plantuml-skin-clean.iuml[]
 skinparam defaultTextAlignment center
 
 rectangle "1. APT\nvauban-processor" as APT
@@ -165,8 +164,7 @@ the end of the chain, the real method is called through a lambda call site, not 
 [plantuml, diag-vauban-intercepted-call, format=svg]
 ----
 @startuml
-!option handwritten true
-include::../plantuml-skin.iuml[]
+include::../plantuml-skin-clean.iuml[]
 autonumber
 participant "caller" as C
 participant "<Bean>_ClientProxy" as P
@@ -260,8 +258,7 @@ package at the first lookup miss.
 [plantuml, diag-vauban-classloading, format=svg]
 ----
 @startuml
-!option handwritten true
-include::../plantuml-skin.iuml[]
+include::../plantuml-skin-clean.iuml[]
 skinparam defaultTextAlignment center
 
 rectangle "archive\njar, directory, encrypted jar" as A
