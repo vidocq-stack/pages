@@ -171,10 +171,19 @@ It skips what the processor already did, by two independent checks: an archive t
 bean index is not re-scanned, and a generated class already on disk is not regenerated.
 
 Two things only this tier can do. It can generate for a **dependency jar** that was built without the
-processor, which is how the ecosystem bricks are covered. And two opt-in goals live here:
-`enhance-dependencies`, which writes an enhanced *copy* of a third-party jar with the proxy
-co-located in the type's own package and a rewritten `module-info`, and `encrypt`, which turns a
-modular jar into an encrypted one.
+processor, which is how the ecosystem bricks are covered. And because it is the only tier that sees
+those archives, it also ships what tier 4 needs for them: when a produced type's proxy cannot live in
+the producer's package, the plugin writes that proxy pre-generated as a resource and adds the type to
+the list the class loader reads, merging with whatever the processor already wrote. It then reports
+those types at build time, saying plainly that they will need the application to start inside a
+Vauban layer. A build cannot promise more: whether a layer exists is decided at launch.
+
+Two opt-in goals also live here. `encrypt` turns a modular jar into an encrypted one. And
+`enhance-dependencies` writes an enhanced *copy* of a third-party jar, with the proxy co-located in
+the type's own package and a rewritten `module-info`. Treat that one as a last resort: rewriting
+someone else's artefact drops its signature, and the goal now warns, per type, when the class loader
+could have shipped the same proxy without touching the jar. It earns its place only where placement
+cannot reach — no Vauban layer at launch, a library that exports nothing, or a GraalVM native image.
 
 One asymmetry to remember: the processor sees **method-level** interceptor bindings because it reads
 javac's model, while the plugin only sees class-level bindings from the index. The two tiers are not
@@ -280,11 +289,15 @@ rule would be one sentence long and the generated code trivial. But the code tha
 full of package-private collaborators between classes of the same package, and a container that
 quietly broke them would simply be wrong. So we cope, and the tiers above are what coping looks like.
 
-Vauban's answer uses a property of the platform rather than a hole in it. `opens` governs *reflective*
-access; it has nothing to say about a class loader defining a class. A loader that defined a module
-owns its packages and may define more classes into them. So the build ships the co-located proxy as a
-**resource** of your own bean archive, and the Vauban class loader defines it into the library's
-package at the first lookup miss.
+So the build ships two things inside your own bean archive, and they deserve plainer names than
+"manifest". First, **the proxy class itself, pre-generated**, written as a *resource* under
+`META-INF/vauban/placed/` — a resource, not a class, so the build never writes into someone else's
+package. Second, **the list of produced types whose proxy must sit inside their own package**,
+`META-INF/vauban/required-opens.list`, one name per line. That list is named after the problem it
+records: with a Vauban class loader it is the loader's authorisation to define the shipped proxy in
+that package; without one, the container reads the very same list to know which packages it would
+otherwise have to open. At the first lookup miss, the loader defines the proxy into the library's
+package.
 
 [plantuml, diag-vauban-classloading, format=svg]
 ----
@@ -426,7 +439,7 @@ Everything above leaves evidence on disk. After a build:
 # what the processor rendered as source
 ls target/generated-sources/annotations/**/*_ClientProxy.java
 
-# the bean index, the placement manifest and the placed proxy bytes
+# the bean index, the list of types needing an in-package proxy, and those proxies
 unzip -l target/my-app.jar | grep -E 'vauban-beans.list|required-opens.list|vauban/placed'
 
 # every generated class file must carry the project's release, not the build JDK's
