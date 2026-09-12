@@ -21,7 +21,7 @@ previous one cannot reach.
 
 == The four tiers, in one picture
 
-[plantuml, diag-vauban-tiers, format=svg]
+[plantuml, format=svg, opts=inline]
 ----
 @startuml
 include::../plantuml-skin.iuml[]
@@ -159,7 +159,7 @@ context, a `$$super$` bridge that calls `super.method()` with `invokespecial`, a
 the end of the chain, the real method is called through a lambda call site, not through
 `Method.invoke`.
 
-[plantuml, diag-vauban-intercepted-call, format=svg]
+[plantuml, format=svg, opts=inline]
 ----
 @startuml
 include::../plantuml-skin.iuml[]
@@ -218,7 +218,7 @@ owns its packages and may define more classes into them. So the build ships the 
 **resource** of your own bean archive, and the Vauban class loader defines it into the library's
 package at the first lookup miss.
 
-[plantuml, diag-vauban-classloading, format=svg]
+[plantuml, format=svg, opts=inline]
 ----
 @startuml
 include::../plantuml-skin.iuml[]
