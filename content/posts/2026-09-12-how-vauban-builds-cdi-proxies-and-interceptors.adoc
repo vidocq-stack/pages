@@ -6,6 +6,8 @@ layout: post
 authors: [yannblazart, antoinesabotdurand]
 tags: [cdi, java-modules, vauban, codegen, deep-dive]
 ---
+:imagesdir: /images/posts
+:imagesoutdir: ../../public/images/posts
 
 image::/images/posts/2026-09-12-banner.jpeg["Viduke, in top hat and red-lined cape, juggles glowing module-info cubes over the Paris rooftops while ribbons of bytecode curl around him and a tangled old classpath rope lies at his feet",role=blog-banner]
 
@@ -21,9 +23,10 @@ previous one cannot reach.
 
 == The four tiers, in one picture
 
-[plantuml, format=svg, opts=inline]
+[plantuml, diag-vauban-tiers, format=svg]
 ----
 @startuml
+!option handwritten true
 include::../plantuml-skin.iuml[]
 skinparam defaultTextAlignment center
 
@@ -159,9 +162,10 @@ context, a `$$super$` bridge that calls `super.method()` with `invokespecial`, a
 the end of the chain, the real method is called through a lambda call site, not through
 `Method.invoke`.
 
-[plantuml, format=svg, opts=inline]
+[plantuml, diag-vauban-intercepted-call, format=svg]
 ----
 @startuml
+!option handwritten true
 include::../plantuml-skin.iuml[]
 autonumber
 participant "caller" as C
@@ -212,15 +216,51 @@ declaring package. The proxy must therefore live *inside the library's package* 
 costs an `opens` the library owner will never grant. That is
 https://github.com/jakartaee/cdi/issues/1015[jakartaee/cdi#1015^].
 
+=== The case that actually bites
+
+It is rarely an exotic library type. It is the service next door. `OrderService` injects
+`PricingService`, both in the same package, and calls a method nobody ever made public because it
+never needed to be:
+
+[source,java]
+----
+@ApplicationScoped
+public class PricingService {
+
+    BigDecimal rawQuote(Order order) { ... }   // package-private, on purpose
+}
+
+@ApplicationScoped
+public class OrderService {
+
+    @Inject PricingService pricing;            // a client proxy, not the bean
+
+    public Quote quote(Order order) {
+        return new Quote(pricing.rawQuote(order));
+    }
+}
+----
+
+`pricing` is a proxy. If that proxy does not override `rawQuote`, the call runs against the proxy's
+own empty instance instead of the contextual one: no exception, just a wrong number. That is the
+worst failure mode a container can have. Overriding the method requires the proxy to sit in the same
+runtime package as `PricingService`, which is exactly the constraint the rest of this post is about.
+
+For the record, we would have preferred a specification where only public members are proxyable. The
+rule would be one sentence long and the generated code trivial. But the code that exists today is
+full of package-private collaborators between classes of the same package, and a container that
+quietly broke them would simply be wrong. So we cope, and the tiers above are what coping looks like.
+
 Vauban's answer uses a property of the platform rather than a hole in it. `opens` governs *reflective*
 access; it has nothing to say about a class loader defining a class. A loader that defined a module
 owns its packages and may define more classes into them. So the build ships the co-located proxy as a
 **resource** of your own bean archive, and the Vauban class loader defines it into the library's
 package at the first lookup miss.
 
-[plantuml, format=svg, opts=inline]
+[plantuml, diag-vauban-classloading, format=svg]
 ----
 @startuml
+!option handwritten true
 include::../plantuml-skin.iuml[]
 skinparam defaultTextAlignment center
 
