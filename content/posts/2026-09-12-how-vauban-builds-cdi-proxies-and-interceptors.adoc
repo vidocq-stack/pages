@@ -7,7 +7,7 @@ authors: [yannblazart, antoinesabotdurand]
 tags: [cdi, java-modules, vauban, codegen, deep-dive]
 ---
 
-image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+image::/images/posts/2026-09-12-banner.jpeg["Viduke, in top hat and red-lined cape, juggles glowing module-info cubes over the Paris rooftops while ribbons of bytecode curl around him and a tangled old classpath rope lies at his feet",role=blog-banner]
 
 A CDI container has to manufacture classes. A normal-scoped bean is handed out as a *client proxy*,
 a subclass forwarding every business method to the contextual instance. A bean with interceptor
