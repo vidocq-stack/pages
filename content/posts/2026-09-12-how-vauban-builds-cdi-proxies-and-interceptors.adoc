@@ -116,6 +116,37 @@ Creating a proxy must not run the bean's constructor. Doing so would duplicate e
 constructor has. The trick is a synthetic, side-effect-free entry constructor in the bean class, and
 the proxy chains to that one.
 
+This is not a theoretical worry. It reached us as a bug report from an application built on the
+runtime, https://codefloe.com/Vidocq/vauban/issues/24[vauban#24^]: an `@ApplicationScoped` bean whose
+constructor counted its own instantiations.
+
+[source,java]
+----
+@ApplicationScoped
+public class Greeter {
+
+    private static final AtomicInteger CONSTRUCTIONS = new AtomicInteger();
+
+    public Greeter() {
+        System.out.println("[repro] constructed, count=" + CONSTRUCTIONS.incrementAndGet());
+    }
+
+    public String greet() {
+        return "constructions=" + CONSTRUCTIONS.get();
+    }
+}
+----
+
+One bean, one request, and the endpoint answered `constructions=2`. The generated proxy extended the
+bean, so its own no-arg constructor chained to `super()` and ran the bean's constructor a second
+time, on a throwaway instance nobody would ever use.
+
+The counter made the defect visible; it did not cause it. Whatever a constructor does — open a pool,
+register a listener, increment a metric, read a configuration file — was happening twice for every
+normal-scoped bean, silently. Blaming the application for putting code in a constructor would have
+been the easy answer and the wrong one: the container is what must not run it. Hence the marker
+constructor, and hence this tier.
+
 The processor cannot add it. JSR 269 can only create *new* files, and annotation processing runs
 *before* javac writes any class file. So Vauban ships, in the same jar, an auto-started javac plugin.
 It hooks the end of compilation and patches the class files javac has just written.
