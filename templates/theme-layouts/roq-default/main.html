@@ -153,3 +153,78 @@ layout: default
     setTimeout(addCopyButtons, 500);
   })();
 </script>
+
+<script>
+  (() => {
+    // Click-to-zoom lightbox for article images — inline diagrams (especially
+    // sequence diagrams) are often too small to read at article width.
+    const openLightbox = (src, alt) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'img-lightbox';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-label', alt || 'Image zoom');
+
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = alt || '';
+
+      const close = document.createElement('button');
+      close.className = 'img-lightbox-close';
+      close.setAttribute('type', 'button');
+      close.setAttribute('aria-label', 'Close');
+      close.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+
+      const remove = () => {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+      };
+      const onKey = (e) => { if (e.key === 'Escape') remove(); };
+
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) remove(); });
+      close.addEventListener('click', remove);
+      // Clicking the image toggles a further zoom level (scrollable) instead of closing.
+      img.addEventListener('click', (e) => {
+        e.stopPropagation();
+        img.classList.toggle('zoomed');
+      });
+
+      document.addEventListener('keydown', onKey);
+      overlay.append(img, close);
+      document.body.appendChild(overlay);
+    };
+
+    const addZoomButtons = () => {
+      const images = document.querySelectorAll(
+        '.vid-article-content .imageblock:not(.blog-banner) img, .vid-page-content .imageblock:not(.blog-banner) img'
+      );
+
+      images.forEach((image) => {
+        if (image.closest('.img-zoom-wrapper')) return;
+
+        // Shrink-wrap the image so the button anchors to its top-right corner.
+        const wrapper = document.createElement('span');
+        wrapper.className = 'img-zoom-wrapper';
+        image.replaceWith(wrapper);
+        wrapper.appendChild(image);
+
+        const btn = document.createElement('button');
+        btn.className = 'img-zoom-btn';
+        btn.setAttribute('type', 'button');
+        btn.setAttribute('aria-label', 'Zoom image');
+        btn.innerHTML = '<i class="fa-solid fa-magnifying-glass-plus"></i>';
+
+        const open = () => openLightbox(image.currentSrc || image.src, image.alt);
+        btn.addEventListener('click', open);
+        image.addEventListener('click', open);
+
+        wrapper.appendChild(btn);
+      });
+    };
+
+    // Run on initial load
+    addZoomButtons();
+
+    // Run again after a short delay to catch dynamically rendered content
+    setTimeout(addZoomButtons, 500);
+  })();
+</script>

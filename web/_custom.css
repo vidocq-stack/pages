@@ -1738,3 +1738,111 @@ img[alt="Vidocq banner"] {
   }
 }
 
+
+/* --- Image zoom (lightbox) for article diagrams and illustrations --- */
+
+.img-zoom-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.img-zoom-wrapper img {
+  cursor: zoom-in;
+  max-width: 100%;
+  height: auto;
+}
+
+.img-zoom-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+  border: none;
+  border-radius: 0.375rem;
+  color: rgba(255,255,255,0.85);
+  cursor: zoom-in;
+  font-size: 0.8rem;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.img-zoom-btn:hover,
+.img-zoom-btn:focus-visible {
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+}
+
+.img-zoom-wrapper:hover .img-zoom-btn,
+.img-zoom-btn:focus-visible {
+  opacity: 1;
+}
+
+/* Touch screens have no hover: keep the button visible. */
+@media (hover: none) {
+  .img-zoom-btn {
+    opacity: 1;
+  }
+}
+
+.img-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(10, 12, 18, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 2rem;
+  cursor: zoom-out;
+}
+
+.img-lightbox img {
+  max-width: min(1600px, 95vw);
+  max-height: 92vh;
+  width: auto;
+  height: auto;
+  margin: auto; /* keeps top-left reachable when the zoomed image overflows */
+  padding: 0.75rem;
+  background: #fff; /* diagrams with transparent backgrounds stay readable */
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  cursor: zoom-in;
+}
+
+.img-lightbox img.zoomed {
+  max-width: none;
+  max-height: none;
+  width: 200vw;
+  cursor: zoom-out;
+}
+
+.img-lightbox-close {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.12);
+  border: none;
+  border-radius: 9999px;
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+.img-lightbox-close:hover {
+  background: rgba(255,255,255,0.25);
+}
