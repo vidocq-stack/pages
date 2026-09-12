@@ -1,0 +1,376 @@
+---
+title: "Where Do CDI Proxies Come From? Vauban's Four Generation Tiers"
+description: Vauban writes client proxies, interceptor subclasses, factories and component providers without a single reflective call at runtime. This walks through who generates what — javac and APT, the auto-started javac plugin, the Maven plugin, the class loader — how each tier reaches code it cannot recompile, and how to check the result yourself.
+date: 2026-09-12
+layout: post
+authors: [yannblazart, antoinesabotdurand]
+tags: [cdi, java-modules, vauban, codegen, deep-dive]
+---
+
+image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+
+A CDI container has to manufacture classes. A normal-scoped bean is handed out as a *client proxy*,
+a subclass forwarding every business method to the contextual instance. A bean with interceptor
+bindings is handed out as an *intercepted subclass* that routes its methods through the interceptor
+chain. Most containers build these at runtime, with reflection and a bytecode library.
+
+Vauban builds them at compile time, with the Class-File API and plain Java source, and keeps strict
+Java modules: no `opens`, no dynamic proxy, no ASM. That single constraint is what makes the design
+interesting — and it is why there is not one generator but four tiers, each covering what the
+previous one cannot reach.
+
+== The four tiers, in one picture
+
+[plantuml, diag-vauban-tiers, format=svg]
+----
+@startuml
+include::../plantuml-skin.iuml[]
+skinparam defaultTextAlignment center
+
+rectangle "1. APT\nvauban-processor" as APT
+rectangle "2. javac plugin\nauto-started" as PLUG
+rectangle "3. Maven plugin\nvauban:generate" as MVN
+rectangle "4. VaubanClassLoader\nat class definition" as CL
+
+APT -right-> PLUG : weave plan
+PLUG -right-> MVN : compiled classes
+MVN -right-> CL : packaged jars
+
+note bottom of APT
+  your own sources
+  source-first
+end note
+note bottom of PLUG
+  patches what APT
+  cannot: existing classes
+end note
+note bottom of MVN
+  jars and modules
+  that never saw the APT
+end note
+note bottom of CL
+  third-party modules
+  you cannot recompile
+end note
+@enduml
+----
+
+Each tier exists because of a precise limitation of the previous one. That is the whole story, and
+the rest of this post is the detail.
+
+== Tier 1 — your own code, through the annotation processor
+
+`vauban-processor` is a plain `javax.annotation.processing.Processor`. It accumulates types through
+the annotation-processing rounds and generates everything in the **last** round, so that classes
+emitted by other processors in earlier rounds are included.
+
+It emits, per bean: a `_Factory` that instantiates the bean with a direct constructor call, a
+`_ClientProxy` for normal scopes, a `$$Intercepted` subclass when the bean carries interceptor
+bindings, and — once per *package*, never per module — a `_VaubanComponents` provider that creates
+all of them in-module.
+
+That last one is the key to zero `opens`. The provider is generated **inside your package**, so it
+can call package-private members and `new` the generated classes directly. The container never
+reflects into your module; it asks the provider, which is a service declared in your own
+`module-info`.
+
+And that is also why the processor prefers **Java source** over bytecode:
+
+[cols="1,1,2"]
+|===
+|Artefact |Form |When it falls back to bytecode
+
+|`<Bean>_Factory`
+|Java source
+|Nested type, or no non-private no-arg constructor, or `BeanFactory` not resolvable in this
+compilation.
+
+|`<Bean>_ClientProxy`
+|Java source
+|Nested type, or no non-private constructor at all.
+
+|`<Bean>$$Intercepted`
+|Java source
+|Never, in the processor. The bytecode emitter serves the other tiers.
+
+|`<pkg>._VaubanComponents`
+|Java source
+|Never. Source is possible precisely because its siblings are source too.
+|===
+
+The bytecode fallbacks go through the Class-File API and are written with the `Filer` like any other
+output. They exist because bytecode references resolve at load time, which lets the processor emit a
+factory even when the compilation cannot see `BeanFactory` on its compile path.
+
+A detail worth knowing if you write generators yourself: a generated class file must carry the
+version of the **project's** release, not of the JDK running the build. Compile with `--release 25`
+on a JDK 26 and a naive generator writes class file 70 next to javac's 69, producing a jar that
+cannot be loaded by the runtime you compiled for. Vauban pins every generated class to the project
+baseline, and weaving hands back the version of the class it patches.
+
+== Tier 2 — the javac plugin, because a processor cannot patch
+
+Creating a proxy must not run the bean's constructor. Doing so would duplicate every side effect the
+constructor has. The trick is a synthetic, side-effect-free entry constructor in the bean class, and
+the proxy chains to that one.
+
+The processor cannot add it. JSR 269 can only create *new* files, and annotation processing runs
+*before* javac writes any class file. So Vauban ships, in the same jar, an auto-started javac plugin.
+It hooks the end of compilation and patches the class files javac has just written.
+
+The two halves cannot share a static field — processors and plugins load in different class loaders
+— so they shake hands through the output directory: the processor writes a small *weave plan*
+listing which classes need the entry constructor and which proxies must be retargeted onto it, and
+the plugin executes it once the class files exist, then deletes the plan so nothing leaks into the
+packaged jar.
+
+`autoStart` returns `true`, so this works in any build that runs javac, with no configuration in
+your `pom.xml`.
+
+== Tier 3 — the Maven plugin, for what never went through javac here
+
+`vauban:generate` runs at `process-classes` and does the same work from the outside: it scans the
+project's classes *and* the dependency jars, writes the merged bean index `META-INF/vauban-beans.list`,
+weaves the entry constructor as a second pass, and generates the missing classes — this time as
+bytecode, since the plugin has no javac.
+
+It skips what the processor already did, by two independent checks: an archive that already ships a
+bean index is not re-scanned, and a generated class already on disk is not regenerated.
+
+Two things only this tier can do. It can generate for a **dependency jar** that was built without the
+processor, which is how the ecosystem bricks are covered. And two opt-in goals live here:
+`enhance-dependencies`, which writes an enhanced *copy* of a third-party jar with the proxy
+co-located in the type's own package and a rewritten `module-info`, and `encrypt`, which turns a
+modular jar into an encrypted one.
+
+One asymmetry to remember: the processor sees **method-level** interceptor bindings because it reads
+javac's model, while the plugin only sees class-level bindings from the index. The two tiers are not
+interchangeable.
+
+== Interceptors: two sibling subclasses, no reflection at the end of the chain
+
+The intercepted subclass and the client proxy both extend the bean class. They are *siblings*, not
+stacked: the proxy's delegate resolves the contextual instance, and that instance is the
+`$$Intercepted` one, because the bean's factory was swapped at boot.
+
+Each intercepted method gets three generated members: the override that builds the invocation
+context, a `$$super$` bridge that calls `super.method()` with `invokespecial`, and a private static
+`$$ti$` glue lifted into a `TargetInvoker` through `LambdaMetafactory`. That last point matters: at
+the end of the chain, the real method is called through a lambda call site, not through
+`Method.invoke`.
+
+[plantuml, diag-vauban-intercepted-call, format=svg]
+----
+@startuml
+include::../plantuml-skin.iuml[]
+autonumber
+participant "caller" as C
+participant "<Bean>_ClientProxy" as P
+participant "context" as CTX
+participant "<Bean>$$Intercepted" as I
+participant "InterceptorManager" as M
+participant "InvocationContext" as IC
+participant "interceptor" as INT
+
+C -> P : work()
+P -> CTX : delegate.get()
+CTX -> I : create via _VaubanComponents\nthen $$init(...)
+P -> I : work()
+I -> M : resolveChainForMethod(bindings, $$super$work)
+M --> I : ordered chain + TargetInvoker
+I -> IC : proceed()
+IC -> INT : aroundInvoke(ctx)
+INT -> IC : ctx.proceed()
+IC -> I : TargetInvoker.invoke -> $$ti$work
+I -> I : $$super$work -> super.work()
+I --> C : result
+@enduml
+----
+
+The chain itself is resolved per call, even for a build-time subclass, because a binding can be added
+by a build-compatible extension. The invocation index travels as a parameter and never as a field, so
+`proceed()` can be called several times — a retry interceptor — and the context is safe on virtual
+threads.
+
+What the container refuses is what the specification refuses: a final class, or a non-private final
+instance method, cannot be intercepted or proxied. You get a deployment error naming the type, at
+boot, not a mysterious failure later.
+
+== Tier 4 — third-party modules, at class loading
+
+Now the interesting case: a library that knows nothing about CDI, that you cannot recompile, and
+whose module opens nothing. You produce one of its types as a normal-scoped bean.
+
+If the produced type is fully public, the proxy is generated at build time **in your own package**
+and forwards through the public API. Zero `opens`, nothing at runtime. Same for an interface: you get
+a generated static implementation, not a `java.lang.reflect.Proxy`.
+
+The hard case is a type with a package-private or `protected` overridable member, or with no
+accessible constructor. A package-private method can only be overridden from the same runtime
+package, and JLS §6.6.2 forbids forwarding a `protected` method on another instance from outside the
+declaring package. The proxy must therefore live *inside the library's package* — which normally
+costs an `opens` the library owner will never grant. That is
+https://github.com/jakartaee/cdi/issues/1015[jakartaee/cdi#1015^].
+
+Vauban's answer uses a property of the platform rather than a hole in it. `opens` governs *reflective*
+access; it has nothing to say about a class loader defining a class. A loader that defined a module
+owns its packages and may define more classes into them. So the build ships the co-located proxy as a
+**resource** of your own bean archive, and the Vauban class loader defines it into the library's
+package at the first lookup miss.
+
+[plantuml, diag-vauban-classloading, format=svg]
+----
+@startuml
+include::../plantuml-skin.iuml[]
+skinparam defaultTextAlignment center
+
+rectangle "archive\njar, directory, encrypted jar" as A
+rectangle "ByteSourcePlugin\ne.g. sjar decryption" as S
+rectangle "ClassTransformerPlugin\ncdi-proxifier" as T
+rectangle "defineClass" as D
+rectangle "placed proxy\nMETA-INF/vauban/placed/**" as PP
+
+A -right-> S : raw bytes
+S -right-> T : clear bytes
+T -right-> D : woven bytes
+PP -up-> D : defined into the\nlibrary's own package
+
+note bottom of T
+  adds the entry constructor
+  at definition, retargets
+  the proxy onto it
+end note
+@enduml
+----
+
+Two plugin kinds hang off that pipeline, both discovered with `ServiceLoader` and ordered by
+priority. A **byte-source plugin** decides how an archive is read — this is where encrypted modules
+plug in: the `sjar` plugin detects its clear header and decrypts entries in memory, so the loader
+sees ordinary class bytes and nothing else in the chain knows the difference. A **class-transformer
+plugin** sees each class before definition; the shipped one is the CDI proxifier, which applies at
+definition exactly the weaving the javac plugin applies at compile time.
+
+The limits are honest ones. Placement replaces the `opens`, never the `exports`: the container
+instantiates the placed proxy from its own module, so the produced type's package must still be
+exported. A type that is final, sealed or abstract stays unproxyable, as the specification says. And
+a module the loader had to keep in the boot layer is not covered.
+
+== How to run it: Vauban in plain Java SE
+
+For the loader to own the library's package, the application has to run inside a Vauban layer. In
+plain Java SE, that is the launcher, and the entry point itself has to move — it cannot be hidden
+inside `initialize()`. A class is identified by its name *and* its loader: a `main` left in the boot
+layer holds the boot layer's `Gadget.class` while the placed proxy extends the layer's `Gadget`, and
+`select(Gadget.class)` ends in a `ClassCastException`.
+
+So `main` re-enters itself, once:
+
+[source,java]
+----
+public static void main(String[] args) throws Throwable {
+    if (Launch.run("com.acme.app/com.acme.app.Main", args)) {
+        return; // this call re-launched us inside the layer; nothing left to do here
+    }
+    try (SeContainer container = SeContainerInitializer.newInstance()
+            .addBeanClasses(Integrations.class, CheckoutService.class)
+            .initialize()) {
+        // the application, now running inside the layer
+    }
+}
+----
+
+`Launch.run` returns `true` when it ran the target in a fresh layer and `false`, doing nothing, when
+the caller already runs in one. Your command line does not change:
+
+[source,shell]
+----
+java -p mods -m com.acme.app/com.acme.app.Main
+----
+
+If you would rather invoke the launcher as the main module, add `--add-modules ALL-MODULE-PATH`,
+because with `-m` the launcher would otherwise be the only root module and there would be nothing to
+re-layer.
+
+Which modules move is one published policy: the platform, Jakarta and container modules stay, so do
+automatic modules, modules owning a `javax.`, `sun.` or `com.sun.` package, anything you name in
+`-Dvauban.launch.keep`, and transitively everything a kept module reads. Your own module is a *root*:
+no keep prefix holds it back. Everything else moves.
+
+== How to run it: Vauban inside Vidocq
+
+The Vidocq runtime applies the same policy, through a trampoline:
+
+[source,java]
+----
+@VidocqMain
+public class MyApp implements VidocqApp {
+
+    static void main(String[] args) {
+        Vidocq.run(MyApp.class, args);   // nothing before this line
+    }
+
+    @Override
+    public int run(String... args) {
+        Vidocq.waitForExit();
+        return 0;
+    }
+}
+----
+
+Two entry paths exist. Set `-Dvidocq.app.path=<archives>` and the application archives stay *off* the
+JVM module path entirely; the runtime resolves them into the layer. Or set nothing, and the runtime
+detects the application modules in the boot layer starting from the caller's own module, which is the
+plain IDE launch. `-Dvidocq.app.modules=<names>` overrides the detection when you need to.
+
+The rule to remember is the one the compiler cannot enforce: **no business logic before
+`Vidocq.run(...)`**. The trampoline class is loaded by the boot layer; anything you execute before
+the call runs in the wrong loader, against untransformed classes.
+
+== What happens when you press Run in your IDE
+
+This is where the tiers meet, and it is worth spelling out.
+
+IntelliJ's build system writes class files to disk *after* javac has finished, which defeats the
+auto-started javac plugin: the plan executes, then the IDE overwrites the patched classes with its
+own copies. The result is a build output where beans lack the entry constructor.
+
+The container notices before loading a single bean class. It reads the bean lists visible on the
+module path and inspects the candidates' bytes as *resources*, so nothing is loaded and nothing is
+decided by reflection. Then it branches:
+
+* if a Vauban class loader sits in the context class-loader chain — you launched through the
+  trampoline or the SE launcher — it logs that the loader will weave those beans at definition, and
+  **no agent is attached**;
+* otherwise it warns, listing the affected beans, and self-attaches the load-time weaving agent for
+  this JVM, which applies the same transformation as the class is defined. You also get the JDK's
+  dynamic-agent notice, and the log suggests the trampoline as the way to avoid it.
+
+Both paths end with the same bytecode. The difference is that the first one needs no agent, which
+matters as the platform keeps closing dynamic attachment down. Delegating the IDE build to Maven also
+removes the problem at the source, since then javac writes the classes last.
+
+== Checking it yourself
+
+Everything above leaves evidence on disk. After a build:
+
+[source,shell]
+----
+# what the processor rendered as source
+ls target/generated-sources/annotations/**/*_ClientProxy.java
+
+# the bean index, the placement manifest and the placed proxy bytes
+unzip -l target/my-app.jar | grep -E 'vauban-beans.list|required-opens.list|vauban/placed'
+
+# every generated class file must carry the project's release, not the build JDK's
+javap -v -cp target/classes com.acme.MyBean_Factory | grep major
+----
+
+At boot, the container tells you which tier is in play: a line naming the modules re-layered into the
+Vauban layer, or a warning naming the beans that still need the agent. A runnable end-to-end example,
+with a public class, an interface, a class with a package-private member and a class with no
+accessible constructor, lives in the Vauban repository under
+https://codefloe.com/Vidocq/vauban/src/branch/main/vauban-examples/example-cdi1015-app[example-cdi1015-app^].
+
+The full reference is on the https://doc.vidocq.dev/vauban/dev/internals.html[Vauban internals^] page,
+and the launcher is documented on https://doc.vidocq.dev/vauban/dev/se.html[Vauban in Java SE^].
+Questions and corrections are welcome on https://codefloe.com/Vidocq[our forge^].
