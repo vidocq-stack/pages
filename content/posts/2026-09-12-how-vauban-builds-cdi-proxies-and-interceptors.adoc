@@ -46,7 +46,7 @@ which deliberately carries every origin at once:
 |Nothing, or a Vauban launcher for the hard shapes.
 
 |**A dependency with no `module-info`**
-|Any plain jar you add to the module path
+|`example-legacy-lib`, consumed by `example-legacy-app`
 |`vauban:modularize` first.
 
 |**No class loader at all** — a GraalVM native image
@@ -324,6 +324,20 @@ declares. It is all done with the JDK alone: the Class-File API writes the descr
 `ModuleFinder` answers the only question that matters, which module owns a package.
 
 Once the jar is a real module, you are back in case 2.
+
+`example-legacy-app` in the repository does exactly this, and its test reads the result back:
+
+[source,text]
+----
+open module com.acme.legacy@0.4.0-SNAPSHOT {
+    requires jakarta.inject;     <1>
+    requires java.base;
+    exports com.acme.legacy;
+    exports com.acme.legacy.spi;
+}
+----
+<1> Nothing declared that. One class of the jar implements `jakarta.inject.Provider`, and the
+    derivation read it off the bytecode.
 
 == Case 4 — when there is no class loader to help
 
