@@ -121,18 +121,79 @@ case "app.Ledgers$Ledger" -> new app.Ledgers.Ledger();
 Its proxy is named `Ledgers$Ledger_ClientProxy` — a top-level class whose simple name contains a
 `$`, never a member of `Ledgers`, since nothing can add a member to a class that already exists.
 
-=== The one thing a processor cannot do
+=== The constructor problem: your code, run twice
 
-An annotation processor can *create* files; it cannot *modify* the class javac is compiling. But a
-client proxy must call some `super()` constructor, and a bean whose only constructor is
-`@Inject`-annotated has none that is safe to call twice — you would run its body a second time, on
-an instance that will never be used. This is the bug Sébastien's constructor-side-effects case
-made famous.
+A client proxy is a *subclass*. `CheckoutService_ClientProxy extends CheckoutService` — and in Java,
+constructing a subclass constructs the superclass first. So creating the proxy runs one of your
+bean's constructors, on an instance that will never serve a single request. Its state is dead
+weight: every call is forwarded to the contextual instance.
 
-So Vauban auto-starts a **javac plugin** that, once compilation is finished, weaves a synthetic
-`(ProxyLink)` entry constructor into the compiled bean and points the proxy at it. Your source never
-declares it. That is a *bytecode* patch, on a class that already exists — which is exactly what the
-processor could not do.
+Nobody notices, until a constructor does something:
+
+[source,java]
+----
+@ApplicationScoped
+public class Registry {
+
+    private final Connection connection;
+
+    @Inject
+    public Registry(DataSource ds) throws SQLException {
+        this.connection = ds.getConnection();              // a second connection, never closed
+        Metrics.counter("registry.created").increment();    // counted twice
+        log.info("Registry ready");                         // logged twice
+    }
+}
+----
+
+Two distinct failures come out of this, and the second is worse than the first.
+
+**The side effects happen twice.** A connection opened and leaked, a counter that reads double, a
+registration into some static map that now holds an instance nobody will ever call. Nothing throws;
+your metrics are simply wrong. This is the shape Sébastien's constructor case made famous, and it is
+the reason a container cannot just call whatever constructor it finds.
+
+**And the arguments are lies.** The proxy has no `DataSource` to pass — it is built by the container
+before any injection happens — so it can only pass defaults: `super(null)`. The body then runs with
+`ds == null` and throws a `NullPointerException` from a stack trace that points at *your*
+constructor, in a class you never knowingly instantiated.
+
+==== What Vauban does instead
+
+The bean gets a constructor of its own that does nothing at all:
+
+[source,java]
+----
+protected synthetic Registry(ProxyLink marker) {
+    super();          // that is the entire body
+}
+----
+
+The proxy chains to *that* one — `super((ProxyLink) null)` — so constructing it runs no bean code
+whatsoever. Not the connection, not the counter, not even the field initializers: javac inlines
+those into each constructor it compiles, and this one is added **after** javac has finished.
+
+Which is precisely why it cannot be the annotation processor's job. A processor can *create* files;
+it cannot *modify* the class javac is compiling. So Vauban auto-starts a **javac plugin** that runs
+once compilation ends, weaves the marker constructor into the compiled bean, and retargets the
+generated proxy onto it. Your source never mentions any of it, and the constructor is `synthetic`,
+so it does not show up in your API.
+
+The container never selects that constructor for injection either — it is a marker, not a candidate.
+
+[TIP]
+====
+If you ever declare the entry constructor by hand — which you only need to do when no weaving tier
+is available — then it *is* a source constructor, and javac will inline your field initializers into
+it. Keep them side-effect free:
+
+[source,java]
+----
+protected Registry(ProxyLink link) {
+    this.connection = null;   // javac requires blank finals to be assigned
+}
+----
+====
 
 == Case 2 — a modular dependency you cannot recompile
 
