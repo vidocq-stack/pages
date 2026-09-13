@@ -49,7 +49,7 @@ which deliberately carries every origin at once:
 |Any plain jar you add to the module path
 |`vauban:modularize` first.
 
-|**No class loader to help** — GraalVM native image, `jlink`
+|**No class loader at all** — a GraalVM native image
 |The same dependency, packaged differently
 |`vauban:enhance-dependencies`.
 |===
@@ -89,7 +89,7 @@ else ([no])
       shipped as a resource,
       placed by the class loader;
       stop
-    else ([no: native image, jlink])
+    else ([no: native image])
       :**Case 4**
       vauban:enhance-dependencies
       rewrites a copy of the jar;
@@ -266,14 +266,20 @@ Once the jar is a real module, you are back in case 2.
 
 == Case 4 — when there is no class loader to help
 
-Two situations have no Vauban layer at run time, and no amount of cleverness changes that:
+One situation has no class loader to work with, and no amount of cleverness changes it:
 
-* **GraalVM native image** — classes are defined at build time; there is no loader to place anything.
-* **`jlink`** — inside a runtime image every module is served from `jrt:`, not from a jar on a module
-  path, so there is nothing for the layer to re-open. Today the launcher refuses to start there, and
-  says so (tracked as `BUG-20260912-02`).
+* **GraalVM native image** — classes are defined when the image is built. There is no loader left at
+  run time, so nothing can be placed into anything.
 
-For those, the proxy has to be *in the jar* before the application ever runs. That is
+`jlink` *looks* like it belongs here and does not. Inside a runtime image every module is served from
+`jrt:` rather than from a jar on a module path — but a module in an image is just an exploded
+directory, the JDK exposes it as `/modules/<name>` of the `jrt` file system, and a child layer
+resolves from it perfectly well. Vauban used to drop those locations and refuse to start; it reads
+them now, so a jlink image gets its layer, its placed proxies and its load-time weaving like any
+other run. (That was `BUG-20260912-02`.)
+
+So case 4 is the native-image case. The proxy has to be *in the jar* before the application ever
+runs, and that is
 `vauban:enhance-dependencies`: it writes an enhanced **copy** of the dependency, with the proxy
 co-located in the type's own package, a per-package `_VaubanComponents`, and a rewritten `module-info`
 that `provides` it. Put it ahead of the original on the module path and everything resolves with zero
@@ -502,17 +508,14 @@ vauban:enhance-dependencies goal […]; add the matching `opens … to io.vidocq
 last resort, set -Dvauban.opens.auto=true […]
 ----
 
-**Inside a `jlink` image, the launcher refuses to start at all.** There is no module path to
-re-layer from — every module is served from `jrt:` — so the placement of case 2b is simply not
-available there, and neither is anything else the layer's loader does:
+**Inside a `jlink` image, the same line tells you the layer was built from the image itself** — the
+modules are read from `jrt:`, and everything else behaves as it does on a module path:
 
 [source,text]
 ----
-Exception in thread "main" java.lang.IllegalStateException: No application module to re-layer.
+INFO Vauban layer ready: [com.acme.app, com.acme.lib]
+FraudScreen proxy : com.acme.lib.FraudScreen_ClientProxy  (module com.acme.lib, VaubanClassLoader)
 ----
-
-That is case 4's whole reason to exist: package the proxy into the jar at build time, because at run
-time there will be nobody to place it.
 
 **Ignore it and the boot fails**, with the whole chain named rather than a bare access error:
 
