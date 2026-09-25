@@ -27,11 +27,10 @@ The CI workflow verifies this automatically on every pull request.
 
 If you are new to GPG:
 
-* https://docs.codeberg.org/security/gpg-key/[Sign commits with GPG (Codeberg guide — same steps on any Forgejo instance, including Codefloe)]
 * https://www.gnupg.org/gph/en/manual.html[The GNU Privacy Guard handbook]
 * https://gpgtools.org/[GPG Suite] (macOS) or https://www.openpgp.org/software/kleopatra/[Kleopatra] (Windows/Linux)
 
-Generate a key, configure Git to sign all commits, and add your public key to your Codefloe account:
+Generate a key, configure Git to sign all commits, and add your public key to your Codefloe account (https://codefloe.com/user/settings/keys[Settings → SSH / GPG Keys]; the key's email must be a verified email of the account):
 
 [source,bash]
 ----
