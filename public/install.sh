@@ -6,11 +6,14 @@
 #
 # Usage:
 #   curl -fsSL https://vidocq.dev/install.sh | sh
-#   VIDOCQ_VERSION=0.2.1 curl -fsSL https://vidocq.dev/install.sh | sh   # pin a version
+#   curl -fsSL https://vidocq.dev/install.sh | VIDOCQ_VERSION=0.2.1 sh      # pin a version
+#   curl -fsSL https://vidocq.dev/install.sh | VIDOCQ_VERSION=snapshot sh   # latest build of main
 set -eu
 
 # VIDOCQ_CENTRAL override is for testing against a repository mirror.
 CENTRAL="${VIDOCQ_CENTRAL:-https://repo1.maven.org/maven2}/io/vidocq/runtime/vidocq-runtime-cli"
+# Every build of main publishes its SNAPSHOTs there.
+SNAPSHOTS="${VIDOCQ_SNAPSHOTS:-https://central.sonatype.com/repository/maven-snapshots}/io/vidocq/runtime/vidocq-runtime-cli"
 INSTALL_ROOT="${VIDOCQ_HOME:-$HOME/.vidocq}/cli"
 BIN_DIR="${VIDOCQ_BIN:-$HOME/.local/bin}"
 
@@ -33,7 +36,14 @@ esac
 ok "Java $JAVA_MAJOR detected"
 
 # ── Resolve the version ────────────────────────────────────────
-if [ -n "${VIDOCQ_VERSION:-}" ]; then
+if [ "${VIDOCQ_VERSION:-}" = "snapshot" ]; then
+    say "Resolving the latest SNAPSHOT from the Central snapshot repository..."
+    VERSION=$(curl -fsSL --retry 3 "$SNAPSHOTS/maven-metadata.xml" \
+        | sed -n 's/.*<version>\(.*-SNAPSHOT\)<\/version>.*/\1/p' \
+        | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)
+    [ -n "$VERSION" ] || fail "Could not resolve the latest SNAPSHOT from the snapshot metadata."
+    ok "Latest SNAPSHOT: $VERSION"
+elif [ -n "${VIDOCQ_VERSION:-}" ]; then
     VERSION="$VIDOCQ_VERSION"
     say "Using pinned version $VERSION"
 else
@@ -45,10 +55,25 @@ else
 fi
 
 # ── Download and unpack ────────────────────────────────────────
-DIST_URL="$CENTRAL/$VERSION/vidocq-runtime-cli-$VERSION-cli.zip"
+case "$VERSION" in
+    *-SNAPSHOT)
+        # A SNAPSHOT zip is stored under a timestamped name and changes with every
+        # build of main: always download it again.
+        STAMP=$(curl -fsSL --retry 3 "$SNAPSHOTS/$VERSION/maven-metadata.xml" | tr -d ' \t\r\n' \
+            | sed -n 's/.*<classifier>cli<\/classifier><extension>zip<\/extension><value>\([^<]*\)<\/value>.*/\1/p')
+        [ -n "$STAMP" ] || fail "No $VERSION distribution zip in the snapshot metadata."
+        ok "Build $STAMP"
+        DIST_URL="$SNAPSHOTS/$VERSION/vidocq-runtime-cli-$STAMP-cli.zip"
+        REFRESH=1
+        ;;
+    *)
+        DIST_URL="$CENTRAL/$VERSION/vidocq-runtime-cli-$VERSION-cli.zip"
+        REFRESH=0
+        ;;
+esac
 TARGET="$INSTALL_ROOT/$VERSION"
 
-if [ -x "$TARGET/bin/vidocq" ]; then
+if [ "$REFRESH" = 0 ] && [ -x "$TARGET/bin/vidocq" ]; then
     ok "Vidocq CLI $VERSION is already installed in $TARGET"
 else
     TMP_ZIP=$(mktemp) || fail "mktemp failed"
