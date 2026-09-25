@@ -27,7 +27,7 @@ The CI workflow verifies this automatically on every pull request.
 
 If you are new to GPG:
 
-* https://docs.codeberg.org/security/gpg-key/[Codeberg — Sign commits with GPG]
+* https://docs.codeberg.org/security/gpg-key/[Sign commits with GPG (Codeberg guide — same steps on any Forgejo instance, including Codefloe)]
 * https://www.gnupg.org/gph/en/manual.html[The GNU Privacy Guard handbook]
 * https://gpgtools.org/[GPG Suite] (macOS) or https://www.openpgp.org/software/kleopatra/[Kleopatra] (Windows/Linux)
 

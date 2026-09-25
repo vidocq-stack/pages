@@ -114,12 +114,12 @@ Notes:
 
 ## Deployment — Cloudflare Pages + Forgejo Actions
 
-The source lives on Codeberg (`codeberg.org/Vidocq/pages`, branch `main`).
+The source lives on Codefloe (`codefloe.com/Vidocq/pages`, branch `main`).
 The static site is generated in CI and published to **Cloudflare Pages** (project `vidocq-site`),
 which serves it on its global edge network at **https://vidocq.dev**.
 
 ```
-codeberg.org/Vidocq/pages   ← source (this repo, branch: main)
+codefloe.com/Vidocq/pages   ← source (this repo, branch: main)
         │  push to main
         ▼
    Forgejo Actions (.forgejo/workflows/deploy-pages.yaml)
@@ -150,7 +150,7 @@ if you prefer to configure the custom domain beforehand.
 
 #### 2. Enable Forgejo Actions on the repository
 
-In Codeberg: `Vidocq/pages` → **Settings → Actions → Enable**.
+In Codefloe: `Vidocq/pages` → **Settings → Actions → Enable**.
 
 #### 3. Add the Cloudflare secrets
 
