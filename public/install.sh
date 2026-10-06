@@ -8,6 +8,7 @@
 #   curl -fsSL https://vidocq.dev/install.sh | sh
 #   curl -fsSL https://vidocq.dev/install.sh | VIDOCQ_VERSION=0.2.1 sh      # pin a version
 #   curl -fsSL https://vidocq.dev/install.sh | VIDOCQ_VERSION=snapshot sh   # latest build of main
+#   curl -fsSL https://vidocq.dev/install.sh | VIDOCQ_NO_COMPLETION=1 sh    # leave ~/.zshrc / ~/.bashrc alone
 set -eu
 
 # VIDOCQ_CENTRAL override is for testing against a repository mirror.
@@ -95,6 +96,19 @@ mkdir -p "$BIN_DIR"
 printf '#!/bin/sh\nexec "%s/bin/vidocq" "$@"\n' "$TARGET" > "$BIN_DIR/vidocq"
 chmod +x "$BIN_DIR/vidocq"
 ok "Installed launcher $BIN_DIR/vidocq"
+
+# ── Shell completion ───────────────────────────────────────────
+# `vidocq completion install` writes the script under ~/.vidocq/completion and
+# sources it from ~/.zshrc or ~/.bashrc, the shell taken from $SHELL; running
+# it again never duplicates the block. A CLI older than the command, or another
+# shell, just leaves completion off: it never fails the install.
+if [ -n "${VIDOCQ_NO_COMPLETION:-}" ]; then
+    say "Shell completion skipped (VIDOCQ_NO_COMPLETION is set)"
+elif "$TARGET/bin/vidocq" completion install >/dev/null 2>&1; then
+    ok "Shell completion enabled — open a new terminal (undo: vidocq completion uninstall)"
+else
+    say "Shell completion not set up (it needs bash or zsh, and a CLI with 'vidocq completion install')"
+fi
 
 case ":$PATH:" in
     *":$BIN_DIR:"*)
