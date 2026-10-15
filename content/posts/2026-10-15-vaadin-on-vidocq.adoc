@@ -292,6 +292,11 @@ path, for us and for everyone else.
 
 == Try it
 
+The quickest way in is the example project,
+https://codefloe.com/VidocqTools/vaadin-on-vidocq[VidocqTools/vaadin-on-vidocq]: clone it, then run `./mvnw vidocq:dev`,
+or `./mvnw -Pjlink clean package vidocq:jlink` for the image. Production mode and `vidocq.app.layer=all` are already set
+in its pom, and a `jlink` profile carries the two flags.
+
 Everything here is on the 0.4.0 development line. Use the
 link:/posts/using-the-vidocq-snapshot-builds/[snapshot builds] until 0.4.0 is released, and follow the
 https://doc.vidocq.dev/vidocq/dev/vaadin.html[Vaadin guide]. It has the full pom, the `module-info`, production
