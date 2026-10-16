@@ -28,7 +28,9 @@ command -v unzip >/dev/null 2>&1 || fail "unzip is required."
 command -v java  >/dev/null 2>&1 || fail "Java 25+ is required but no 'java' was found.
   Install it with SDKMAN!: curl -s https://get.sdkman.io | bash && sdk install java 25-tem"
 
-JAVA_MAJOR=$(java -version 2>&1 | awk -F'"' '/version/ {split($2, v, "."); print (v[1] == "1") ? v[2] : v[1]; exit}')
+# Split on version separators too, so early-access versions such as 28-ea
+# retain their numeric major version.
+JAVA_MAJOR=$(java -version 2>&1 | awk -F'"' '/version/ {split($2, v, /[.+-]/); print (v[1] == "1") ? v[2] : v[1]; exit}')
 case "$JAVA_MAJOR" in
     ''|*[!0-9]*) fail "Could not parse the local Java version (java -version)." ;;
 esac
