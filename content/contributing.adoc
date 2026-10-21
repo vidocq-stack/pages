@@ -1,6 +1,6 @@
 ---
 title: Contributing
-description: How to contribute to the Vidocq ecosystem — CLA, GPG signing, conventions, and workflow.
+description: How to contribute to Vidocq — start from the Vidocq workspace, propose changes from your fork, and become a maintainer over time.
 layout: page
 link: /contributing/
 ---
@@ -11,133 +11,152 @@ Vidocq welcomes contributions at every layer of the stack: bug reports,
 TCK coverage improvements, new specification implementations,
 performance work, and documentation.
 
-The source code is hosted under the https://codefloe.com/Vidocq[Vidocq organisation on Codefloe].
-Each specification implementation lives in its own repository.
+The source code is hosted under the https://codefloe.com/Vidocq[Vidocq organisation on Codefloe],
+a https://forgejo.org[Forgejo] instance. Each specification implementation lives in its own repository.
 
-== Before You Start
+== Two ways to take part
 
-Two things are required before any code contribution can be accepted.
-Both are non-negotiable: they protect you, other contributors, and the
-users of the project.
+Everyone starts as a *contributor*: you work in your own fork of a Vidocq repository and propose
+your changes with pull requests from it. After a period of contributions, the maintainers may
+invite you to become a *maintainer*.
 
-=== 1. GPG-signed commits
+[cols="1,2,2",options="header"]
+|===
+|
+| Contributor
+| Maintainer
 
-Every commit must be cryptographically signed with your GPG key.
-The CI workflow verifies this automatically on every pull request.
+| Who
+| anyone who signed the CLA
+| a contributor invited by the maintainers
 
-If you are new to GPG:
+| Pushes to
+| their own fork
+| the Vidocq repositories
 
-* https://www.gnupg.org/gph/en/manual.html[The GNU Privacy Guard handbook]
-* https://gpgtools.org/[GPG Suite] (macOS) or https://www.openpgp.org/software/kleopatra/[Kleopatra] (Windows/Linux)
+| Merged by
+| a maintainer
+| themselves, with `/merge`
 
-Generate a key, configure Git to sign all commits, and add your public key to your Codefloe account (https://codefloe.com/user/settings/keys[Settings → SSH / GPG Keys]; the key's email must be a verified email of the account):
+| Guides
+| https://codefloe.com/Vidocq/vidocq-workspace/src/branch/main/docs/getting-started.md[workspace],
+then https://codefloe.com/Vidocq/governance/src/branch/main/CONTRIBUTING.md[contributor]
+| https://codefloe.com/Vidocq/governance/src/branch/main/MAINTAINERS.md[maintainer]
+|===
+
+== Start here: the Vidocq workspace
+
+Every contribution starts from the same place: the
+https://codefloe.com/Vidocq/vidocq-workspace[`vidocq-workspace`] repository. It is the root
+directory of all the Vidocq repositories, and holds what they share: the rules for humans and
+coding agents (`AGENTS.md`), the git hooks, the https://manicli.com[mani] configuration that
+clones and drives every repository, and the guides.
+
+*Clone it and follow its
+https://codefloe.com/Vidocq/vidocq-workspace/src/branch/main/docs/getting-started.md[getting-started guide].*
+It takes you from a fresh machine to your first pull request, step by step, on macOS, Linux and
+Windows (through WSL 2):
+
+. your Codefloe account, your SSH and GPG keys, and your signature of the CLA;
+. the tools: Git, a Java 25 JDK, mani;
+. the workspace itself, cloned with all the repositories;
+. the Maven configuration and a first build;
+. your first pull request, from your fork.
+
+Once your account and keys are ready, the workspace is three commands away:
 
 [source,bash]
 ----
-# Generate an ed25519 key
-gpg --batch --gen-key <<EOF
-Key-Type: ECDSA
-Key-Curve: ed25519
-Subkey-Type: ECDH
-Subkey-Curve: cv25519
-Name-Real: Your Full Name
-Name-Email: your@email.com
-Expire-Date: 2y
-%ask-passphrase
-EOF
-
-# Find your key ID, then configure git
-gpg --list-secret-keys --keyid-format=long your@email.com
-git config --global user.signingkey KEY_ID
-git config --global commit.gpgsign true
-git config --global tag.gpgsign true
-
-# Automatically append Signed-off-by to every commit
-git config --local format.signoff true
+git clone git@codefloe.com:Vidocq/vidocq-workspace.git
+cd vidocq-workspace
+mani sync                    # clones every repository into <repo>/main/
+mani run -a install-hooks    # the shared git hooks, in every repository
 ----
 
-Export your public key and add it under *Settings → SSH/GPG Keys* in your Codefloe profile:
+== Before your first pull request
 
-[source,bash]
-----
-gpg --export --armor your@email.com
-----
+Three automatic checks run on every pull request, in every repository. A pull request that
+fails one of them cannot be merged.
 
-=== 2. Contributor License Agreement (CLA)
+[cols="1,3",options="header"]
+|===
+| Check | Passes when
 
-Vidocq uses a Contributor License Agreement (CLA v1.0) combined with
-the Developer Certificate of Origin (DCO 1.1) on every commit.
+| CLA
+| you signed the Vidocq Contributor License Agreement: your Codefloe username is listed in the governance repository
 
-The CLA covers the project's disjunctive triple licence:
+| GPG
+| every commit is signed with your GPG key, registered in the governance repository
+
+| DCO
+| every commit carries a `Signed-off-by:` line (Developer Certificate of Origin 1.1)
+|===
+
+You set them up once, in about twenty minutes, by following the
+https://codefloe.com/Vidocq/governance/src/branch/main/README.md#one-time-setup[one-time setup]
+of the https://codefloe.com/Vidocq/governance[governance repository]: it covers macOS, Linux and
+Windows, with examples. The CLA lets the maintainers distribute your contribution under the
+project's disjunctive triple licence:
 
 [source]
 ----
 SPDX-License-Identifier: EPL-2.0 OR EUPL-1.2 OR GPL-2.0-or-later
 ----
 
-To sign the CLA, open a *dedicated pull request* (separate from your first code contribution)
-against the https://codefloe.com/Vidocq/governance[Vidocq governance repository]:
+Contributing on behalf of your employer? Your organisation signs a Corporate CLA first: write to
+mailto:contribute@vidocq.io[contribute@vidocq.io].
 
-. Read https://codefloe.com/Vidocq/governance/src/branch/main/CLA.md[CLA.md] carefully.
-. Add a row with your full name, Codefloe username, and today's date
-  to `CLA-signatures/individuals.md`.
-. Add your exported GPG public key as `.forgejo/keys/<your-username>.asc`
-  (this file enables automated signature verification on future pull requests).
-. Include the following statement verbatim in the pull request description:
-+
-____
-I have read and agree to the Vidocq Contributor License Agreement v1.0.
-____
+== Contributing from a fork
 
-Corporate contributors: contact the maintainers before submitting anything.
-Once your CLA pull request is merged, your code contributions can be reviewed.
+. *Fork* the repository on Codefloe, and add your fork as a remote of the clone that the
+  workspace made (`+git remote add fork git@codefloe.com:<you>/<repo>.git+`).
+. *Create a branch* from the latest `main`, in a worktree next to `main/`.
+. *Write the failing test first*, then the implementation.
+. *Prove it* with a full build: `./mvnw -ntp clean install`. If your change touches a TCK, run it
+  and confirm there is no regression.
+. *Commit and push* to your fork; your commits are signed and signed off automatically.
+. *Open the pull request* from your fork to `main` of the Vidocq repository.
+. *Follow the checks and the review.* If `main` moves on, rebase your branch and push it again;
+  never use the *Update branch* button, which breaks the signatures.
+. *A maintainer merges* your pull request once the review is done and the checks are green.
 
-== Development Setup
+Each step, with the commands and how to fix a failing check, is in the
+https://codefloe.com/Vidocq/governance/src/branch/main/CONTRIBUTING.md[contributor guide].
 
-All sub-projects pin their toolchain via `.sdkmanrc`.
-Install https://sdkman.io[SDKMAN!], then from any sub-project root:
+== Becoming a maintainer
 
-[source,bash]
-----
-sdk env
-----
+After some time contributing, the maintainers may invite you to join them. The decision is
+theirs: there is no automatic threshold. As a maintainer, you join the `devs` team of the Vidocq
+organisation on Codefloe. You then work in branches of the Vidocq repositories instead of a fork,
+merge your own pull requests with the `/merge` command of the merge-bot, and review the pull
+requests of others, including those from forks.
 
-This installs and activates:
+From then on, you follow the
+https://codefloe.com/Vidocq/governance/src/branch/main/MAINTAINERS.md[maintainer guide] of the
+governance repository.
 
-* *Java 25* (Temurin) — required by all sub-projects.
-* *Maven 3.9.16* — pinned via `.sdkmanrc`; Maven 4 is not yet supported.
+== Engineering rules
 
-The workspace is a flat collection of independent Maven reactors — there is no root POM.
-Always `cd` into the sub-project you intend to work on:
+The rules are written in the
+https://codefloe.com/Vidocq/vidocq-workspace/src/branch/main/AGENTS.md[`AGENTS.md`] file of the
+workspace, which coding agents read too, and summarised in each repository's own `AGENTS.md`.
 
-[source,bash]
-----
-cd chappe
-./mvnw -ntp install -DskipTests   # full build
-./mvnw test                        # unit tests only
-----
-
-== Code Conventions
-
-These rules apply to every sub-project unless an explicit exception is documented
-in that sub-project's `CLAUDE.md`.
-
-=== JPMS — strict module boundaries
+=== Strict Java Modules
 
 * Every module ships a `module-info.java`.
-* `exports` are minimal: only packages that form the public API.
-* `opens` require a documented reason (reflective access for CDI is the only accepted case).
+* `exports` are minimal: only the packages of the public API.
+* `opens` require a documented reason.
 * No classpath mode, no automatic modules, no split packages.
 
-=== Zero external dependencies
+=== Zero runtime dependencies
 
-Production scope may only contain Jakarta or MicroProfile specification artifacts.
+What ships depends only on the Jakarta and MicroProfile APIs it implements.
 No ASM, Byte Buddy, reflection libraries, or general-purpose utilities.
-Any new runtime dependency requires explicit justification in the pull request.
+Any new runtime dependency requires an explicit justification in the pull request.
 
 === Maximum static code generation
 
-Prefer the Class-File API (JEP 484) and APT annotation processors over runtime reflection.
+Prefer the Class-File API (JEP 484) and annotation processors over runtime reflection.
 Metadata that can be produced at `compile` or `process-classes` time must not be computed at runtime.
 This keeps startup time flat and makes native compilation with GraalVM and Leyden CDS straightforward.
 
@@ -150,72 +169,59 @@ Avoid `synchronized` blocks around I/O; prefer `ReentrantLock` to prevent carrie
 === Test-driven development
 
 Write the failing test before the implementation — red → green → refactor.
-For official specification tests, use the Jakarta TCK via Arquillian before writing custom tests.
+The official Jakarta and MicroProfile TCKs run through Arquillian. Their runners sit behind the
+`tck` Maven profile, so a normal build neither downloads nor runs them: run them with the script
+at the root of the repository, for example `./run-official-tck-servlet6.1.sh` in Foy or
+`./run-official-tck-restful-4.0.sh` in Cassini.
 
-=== TCK runners
+=== Toolchain
 
-TCK runners are intentionally excluded from their parent reactor because ShrinkWrap 3.3 is
-incompatible with Maven Model 4.1.0.
-Always run TCKs via the provided shell script from the sub-project root:
+Java 25 and Maven 3.9.16. Each repository ships a Maven wrapper: always build with `./mvnw`, and
+always with `clean install`, because a stale `target/` directory can hide a failure or invent one.
 
-[source,bash]
-----
-cassini/run-official-tck-restful-4.0.sh
-foy/run-official-tck-servlet6.1.sh
-champollion/run-official-tck-jsonp-2.1.sh
-----
+== Commit messages
 
-== Submitting a Contribution
-
-. Fork the relevant repository on https://codefloe.com/Vidocq[Codefloe].
-. Create a feature branch from `main`:
-+
-[source,bash]
-----
-git checkout -b feat/your-feature-name
-----
-. Write the failing test first, then the implementation.
-. Verify the full build: `./mvnw verify`.
-. If your change touches a Jakarta TCK, run the relevant script and confirm no regression.
-. Push and open a pull request against `main`.
-
-=== Commit message format
-
-Vidocq uses https://www.conventionalcommits.org/[Conventional Commits]:
+Vidocq uses https://www.conventionalcommits.org/[Conventional Commits], in English:
 
 [source]
 ----
-<type>(<scope>): <short description>
+<type>(<scope>): <short description> (#<issue>)
 
-[optional body]
+[optional body: what changed and why]
 
 Signed-off-by: Your Name <your@email.com>
 ----
 
-*Types:* `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`
+*Types:* `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`
 
-*Scopes:* module names — `chappe`, `vauban`, `champollion`, `ravel`, `cassini`, `foy`, ...
+*Scope:* the area of the repository — `http` or `tls` in Chappe, `processor` in Vauban, `core` in Foy, ...
 
 [source]
 ----
-feat(chappe): add HTTP/2 push promise support
-
-Implements server push as defined in RFC 9113 § 8.4.
-Closes #42.
+fix(tls): the handshake unwraps buffered records before reading (#24)
 
 Signed-off-by: Jane Doe <jane.doe@example.com>
 ----
 
-== Bug Reports and Performance Changes
+If an AI assistant helped you write a commit, add a `Co-Authored-By:` trailer naming the tool.
+You remain the author and the committer.
 
-Any reproducible bug must be tracked in a `BUG.md` file at the root of the relevant sub-project:
+== Bug reports and performance changes
+
+Any reproducible bug must be tracked in a `BUG.md` file at the root of the relevant repository:
 short id, date, symptom, minimal repro, root-cause hypothesis, and status.
 Include a `BUG.md` entry in your pull request if you are fixing a known bug.
 
-Any performance number must be recorded in a `BENCH.md` file at the sub-project root:
+Any performance number must be recorded in a `BENCH.md` file at the root of the repository:
 date, hardware and JVM details, exact command, raw results, and delta versus the previous run.
 Never quote performance figures in commit messages or PR descriptions without a `BENCH.md` entry.
 
 == Language
 
-Commit messages, Javadoc, and all `.md` and `.adoc` files must be written in *English*.
+Code, Javadoc, comments, commit messages, and all `.md` and `.adoc` files are written in *English*.
+
+== Questions
+
+Open an issue in the repository concerned, or in the
+https://codefloe.com/Vidocq/governance[governance repository] for anything about the CLA or the
+contribution process, or write to mailto:contribute@vidocq.io[contribute@vidocq.io].
