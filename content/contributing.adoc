@@ -116,7 +116,8 @@ mailto:contribute@vidocq.io[contribute@vidocq.io].
   and confirm there is no regression.
 . *Commit and push* to your fork; your commits are signed and signed off automatically.
 . *Open the pull request* from your fork to `main` of the Vidocq repository.
-. *Follow the checks and the review.* If `main` moves on, rebase your branch and push it again;
+. *Follow the checks and the review.* The checks of a pull request from a fork start once a
+  maintainer has approved them. If `main` moves on, rebase your branch and push it again;
   never use the *Update branch* button, which breaks the signatures.
 . *A maintainer merges* your pull request once the review is done and the checks are green.
 
@@ -125,8 +126,10 @@ https://codefloe.com/Vidocq/governance/src/branch/main/CONTRIBUTING.md[contribut
 
 == Becoming a maintainer
 
-After some time contributing, the maintainers may invite you to join them. The decision is
-theirs: there is no automatic threshold. As a maintainer, you join the `devs` team of the Vidocq
+Contributing needs no role in the Vidocq organisation: forking, opening pull requests and
+signing the CLA are open to any Codefloe account. After some time contributing, the
+maintainers may invite you to join them. The decision is theirs: there is no automatic
+threshold. As a maintainer, you join the `devs` team of the Vidocq
 organisation on Codefloe. You then work in branches of the Vidocq repositories instead of a fork,
 merge your own pull requests with the `/merge` command of the merge-bot, and review the pull
 requests of others, including those from forks.
