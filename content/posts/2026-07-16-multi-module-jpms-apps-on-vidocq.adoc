@@ -21,6 +21,8 @@ That one warning turned out to be the entrance of a rabbit hole worth writing ab
 whole descent: a JPMS rule, a split package, a jar attribute you have probably never heard of, a
 bug that our own example was silently hiding, and the fix that ships in 0.3.0-SNAPSHOT.
 
+NOTE: *Update 2026-10*: from Vidocq 0.4.0 (in development), an application needs no main class: each application module only declares `vidocq.mainModule`, and a reactor can hold one application per module. See https://doc.vidocq.dev/vidocq/dev/usage.html#several-applications[Several applications in one reactor].
+
 == Rule one: you can only open what you own
 
 JPMS has no syntax for opening someone else's package. An `opens com.acme.rest;` directive in

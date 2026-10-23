@@ -496,6 +496,8 @@ no keep prefix holds it back. Everything else moves.
 
 == How to run it: Vauban inside Vidocq
 
+NOTE: *Update 2026-10*: from Vidocq 0.4.0 (in development), the trampoline is optional. The runtime's own main builds the same Vauban layer from `vidocq.mainModule` under every Maven goal and in a jlink image; keep a `@VidocqMain` class for a right-click Run on a main class in the IDE, or for logic after boot through `VidocqApp`. See https://doc.vidocq.dev/vidocq/dev/usage.html#entry-point[The application entry point].
+
 The Vidocq runtime applies the same policy, through a trampoline:
 
 [source,java]

@@ -13,6 +13,8 @@ Vidocq is a zero-dependency Jakarta EE / MicroProfile runtime for Java 25: JPMS-
 
 NOTE: *Update 2026-07*: the always-current version of this walkthrough lives in the official documentation — https://doc.vidocq.dev/vidocq/getting-started[Getting started] — and the CLI now installs with a one-liner (below). Thanks to our first external users for the feedback!
 
+NOTE: *Update 2026-10*: from Vidocq 0.4.0 (in development), an application needs no main class at all: the runtime's own main boots it from `vidocq.mainModule`, and `vidocq create` writes no `HelloWorldApp` unless you pass `--main`. The `VidocqBootstrap` main below is how 0.3.0 and earlier scaffold a project. See https://doc.vidocq.dev/vidocq/dev/usage.html#entry-point[The application entry point].
+
 == Prerequisites
 
 * **Java 25** (Temurin recommended)

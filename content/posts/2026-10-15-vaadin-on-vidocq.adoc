@@ -140,6 +140,11 @@ The result runs on a machine with no Java installed. The catch is that `jlink` o
 not one Vaadin jar is a named module. This is where most of the work went, and why the command has two flags. Both
 are explained below.
 
+NOTE: *Update 2026-10*: an application with an `AppShellConfigurator` fails in a jlink image on its first request
+(`module flow.server does not declare uses`). `vidocq:package` is not affected. The Vaadin guide gives the cause and a
+workaround class to add to the application:
+https://doc.vidocq.dev/vidocq/dev/vaadin.html#jlink-app-shell[An app shell in a jlink image].
+
 == Why Vaadin needs `vidocq.app.layer=all`
 
 Vidocq starts your application in a module layer of its own, above the runtime's layer. By default, that layer holds
