@@ -21,14 +21,20 @@ agree took more fixes than we expected.
 
 == The setup
 
-A Vaadin application on Vidocq is an ordinary Vidocq application with three more pieces: the Servlet extension,
-the Vaadin BOM (`com.vaadin:vaadin-bom`, imported in `dependencyManagement`), and Vaadin's Maven plugin to build
-the frontend. Here is the core of the pom:
+A Vaadin application on Vidocq is an ordinary Vidocq application, with `vidocq-runtime-parent` as its parent, and
+four more pieces: the Servlet extension, the Vaadin extension, the Vaadin BOM (`com.vaadin:vaadin-bom`, imported in
+`dependencyManagement`), and Vaadin's Maven plugin to build the frontend. Here is the core of the pom:
 
 [source,xml]
 ----
 <properties>
+  <!-- The application's Java module: the runtime's own main boots it, no main class needed. -->
+  <vidocq.mainModule>com.example.app</vidocq.mainModule>
   <vidocq.app.layer>all</vidocq.app.layer>
+  <!-- Vaadin's production mode under vidocq:dev, vidocq:run and in the vidocq:package launch scripts. -->
+  <vidocq.dev.jvmArgs>-Dvaadin.productionMode=true</vidocq.dev.jvmArgs>
+  <vidocq.run.jvmArgs>-Dvaadin.productionMode=true</vidocq.run.jvmArgs>
+  <vidocq.jvmArgs>-Dvaadin.productionMode=true</vidocq.jvmArgs>
 </properties>
 
 <dependencies>
@@ -39,6 +45,11 @@ the frontend. Here is the core of the pom:
   <dependency>
     <groupId>io.vidocq.runtime.extensions.jakartaee.web</groupId>
     <artifactId>vidocq-runtime-foy-servlet-extension</artifactId>
+  </dependency>
+  <!-- Lets Vaadin find your AppShellConfigurator (theme, stylesheets) in a jlink image. -->
+  <dependency>
+    <groupId>io.vidocq.runtime.extensions.jakartaee.web</groupId>
+    <artifactId>vidocq-runtime-vaadin-extension</artifactId>
   </dependency>
   <dependency>
     <groupId>com.vaadin</groupId>
@@ -53,9 +64,10 @@ the frontend. Here is the core of the pom:
 </dependencies>
 ----
 
-On top of that, Foy's codegen bundle goes on the compiler's `annotationProcessorPaths`, and two plugins run:
-`vaadin-maven-plugin` with `prepare-frontend` and `build-frontend`, and `vidocq-runtime-maven-plugin` with
-`generate`. The application code is plain Vaadin:
+On top of that, two plugins run: `vaadin-maven-plugin` with `prepare-frontend` and `build-frontend`, and
+`vidocq-runtime-maven-plugin` with `generate`. The parent manages every Vidocq version, and the Vidocq plugin puts
+Foy's annotation processors on the compiler's path by itself: an extension is one dependency, with no
+`annotationProcessorPaths` to write. There is no main class either. The application code is plain Vaadin:
 
 [source,java]
 ----
@@ -70,8 +82,9 @@ public class MainView extends VerticalLayout {
 }
 ----
 
-The full pom, the `module-info` and the entry point are in the
-https://doc.vidocq.dev/vidocq/dev/vaadin.html[Vaadin guide] of the documentation.
+The full pom and the `module-info` are in the
+https://doc.vidocq.dev/vidocq/dev/vaadin.html[Vaadin guide] of the documentation, and
+https://codefloe.com/VidocqTools/vaadin-on-vidocq[VidocqTools/vaadin-on-vidocq] is a project ready to clone.
 
 Note the one property at the top, `vidocq.app.layer=all`. We come back to it below, because it is the single setting
 Vaadin cannot do without.
@@ -107,8 +120,12 @@ measured in Vaadin's production mode (`-Dvaadin.productionMode=true`).
 
 [source,bash]
 ----
-./mvnw vidocq:dev -Dvidocq.dev.jvmArgs=-Dvaadin.productionMode=true
+./mvnw clean package
+./mvnw vidocq:dev
 ----
+
+Build once first: `vidocq:dev` and `vidocq:run` neither build Vaadin's frontend nor process the Vaadin jars, so on an
+empty `target/` the page answers 404 or 500. The `jvmArgs` properties of the pom start Vaadin in production mode.
 
 This is the everyday loop. The runtime sits on the module path, and your application and its libraries live in a
 layer above it, which `vidocq:dev` throws away and rebuilds on each change. That is the same in-JVM reload as for any
@@ -118,7 +135,7 @@ Vidocq application; Vaadin's 69 jars ride along.
 
 [source,bash]
 ----
-./mvnw clean package vidocq:package -Dvidocq.jvmArgs=-Dvaadin.productionMode=true
+./mvnw clean package vidocq:package
 target/my-app-1.0/bin/my-app.sh
 ----
 
@@ -129,21 +146,24 @@ application and its libraries go in `app/`. The script starts the runtime and ha
 
 [source,bash]
 ----
-./mvnw clean package vidocq:jlink \
-    -Dvidocq.jlink.mergeSharedResources=true \
-    -Dvauban.modularize.forceExplicit=true
+./mvnw -Pjlink clean package vidocq:jlink
 JDK_JAVA_OPTIONS=-Dvaadin.productionMode=true target/dist/bin/my-app
 ----
 
 `jlink` builds a trimmed JDK that contains exactly the modules your application needs, with your application inside.
 The result runs on a machine with no Java installed. The catch is that `jlink` only accepts named Java modules, and
-not one Vaadin jar is a named module. This is where most of the work went, and why the command has two flags. Both
-are explained below.
+not one Vaadin jar is a named module. This is where most of the work went, and why the `jlink` profile adds
+`vauban:modularize`, whose version the parent manages, and two flags, `vidocq.jlink.mergeSharedResources` and
+`vauban.modularize.forceExplicit`. All three are explained below; the guide has the profile.
 
-NOTE: *Update 2026-10*: an application with an `AppShellConfigurator` fails in a jlink image on its first request
-(`module flow.server does not declare uses`). `vidocq:package` is not affected. From Vidocq 0.4.0 (in development),
-add `vidocq-runtime-vaadin-extension` (`vidocq extension add vaadin`); the Vaadin guide gives the cause:
+The Vaadin extension of the setup matters here. Vaadin finds your `AppShellConfigurator`, the class that carries a
+theme or stylesheets, through `ServiceLoader` from `flow-server`, which an image cannot allow: without the extension,
+the first request never answers. It changes nothing under the other goals. The guide explains why:
 https://doc.vidocq.dev/vidocq/dev/vaadin.html#jlink-app-shell[An app shell in a jlink image].
+
+NOTE: *Update 2026-10-25*: this post now shows the 0.4.0 setup. The parent wires the codegen bundles and manages
+`vauban-maven-plugin`, the application needs no main class, `vidocq-runtime-vaadin-extension` joins the setup, and
+the project is built once before `vidocq:dev` or `vidocq:run`.
 
 == Why Vaadin needs `vidocq.app.layer=all`
 
