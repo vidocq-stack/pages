@@ -314,12 +314,54 @@ module io.example.demo.app {
 questions newcomers actually ask are about the project. Why does my REST resource answer 404? Why does this extension
 not start?
 
-In 0.4.0, `vidocq doctor` (and `vidocq:doctor`, same code) also checks that every extension has its codegen and the
-Vauban indexer, that `module-info.java` declares what the extensions need (read from the source, before any
-compile), that Maven is the pinned version, that the HTTP port is free, and that the CLI is up to date. Each problem
-comes with the command that fixes it, and `vidocq doctor --fix` applies the fixes the tooling knows how to make.
+In 0.4.0, `vidocq doctor` (and `vidocq:doctor`, same code) also reads the project, from its sources, so it works
+before the first compile:
 
-// DRAFT(#339): add the output of `vidocq doctor` on a project with one missing directive, then of `vidocq doctor --fix`.
+[cols="2,3,3"]
+|===
+| Check | Reports | `--fix`
+
+| Codegen bundles
+| an extension without its codegen bundle, a bundle whose extension is gone
+| wires it, or removes it
+
+| Vauban indexer
+| processor paths that replace the parent's and drop the indexer
+| makes them append
+
+| Module directives
+| a `requires` or `opens` an extension needs and `module-info.java` lacks
+| adds it, marked `// vidocq:<id>`
+
+| Maven version
+| a wrapper older than the Maven the ecosystem pins
+| moves the wrapper to it
+
+| HTTP port
+| the configured port is taken
+| —
+|===
+
+Every problem it can repair ends with `↳ Fix: vidocq doctor --fix` (or the `mvn vidocq:doctor` line, when you ran the
+goal). Under the application parent the codegen check knows that the plugin wires the bundles, so it does not ask you
+for a path you no longer write. And the test that matters most to us: *a project `vidocq create` has just written
+reports zero warnings*, with or without REST.
+
+// DRAFT(#339): paste the output of `vidocq doctor` on a project with one missing directive, then of `vidocq doctor --fix`.
+
+=== A CLI that says less and helps more
+
+A few smaller things, each from the audit:
+
+* `vidocq info` gives the environment *and* a summary of the project: main module, runtime version, number of
+  extensions, active profile and where it comes from. It reads your files; it does not start Maven.
+* `vidocq config set vidocq.htpp.port 8081` writes the key, and tells you at once that no Vidocq module reads it, and
+  that `vidocq.http.port` is the closest one. Before, only `doctor` noticed, if you thought of running it.
+* The CLI tells you when a newer build exists: at most once a day, on a terminal, never in a script, never after
+  `version` or `completion`, silent when the network is not there. `VIDOCQ_NO_UPDATE_CHECK=1` turns it off.
+* `vidocq extension list --available` used to say "offline" every time, because the remote registry it looked for
+  never existed. The catalog shipped with the CLI is the source, and it is now shown by family: Jakarta EE,
+  MicroProfile, data, web.
 
 == Your first ten minutes with 0.4.0-RC1
 
