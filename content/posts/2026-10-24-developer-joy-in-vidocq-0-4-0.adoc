@@ -297,16 +297,21 @@ behind your back is not a declaration any more. What changed is that you never h
 
 [source,java]
 ----
-module io.example.demo.app {
-    requires io.vidocq.runtime.core;
+module com.example.todo {
+    requires static java.compiler; // vidocq:cassini-rest
     requires io.vidocq.runtime.extensions.jakartaee.core.cassini; // vidocq:cassini-rest
+    requires jakarta.cdi; // vidocq:cassini-rest
+    requires jakarta.inject; // vidocq:cassini-rest
     requires jakarta.ws.rs; // vidocq:cassini-rest
+    requires jakarta.json.bind; // vidocq:cassini-rest
+    requires io.vidocq.cassini.api; // vidocq:cassini-rest
+    opens com.example.todo; // vidocq:cassini-rest
     requires io.vidocq.runtime.extensions.microprofile.knock; // vidocq:knock-health
-    opens io.example.demo.app; // vidocq:cassini-rest
 }
 ----
 
-// DRAFT(#339): replace with the module-info that RC1's `vidocq create -x cassini-rest` + `extension add knock-health` writes.
+That is what `vidocq create --name todo -g com.example -x cassini-rest` followed by `vidocq extension add
+knock-health` writes. The pom, for its part, got one dependency per extension, and nothing else.
 
 === A doctor that looks at the project
 
@@ -347,7 +352,38 @@ goal). Under the application parent the codegen check knows that the plugin wire
 for a path you no longer write. And the test that matters most to us: *a project `vidocq create` has just written
 reports zero warnings*, with or without REST.
 
-// DRAFT(#339): paste the output of `vidocq doctor` on a project with one missing directive, then of `vidocq doctor --fix`.
+Here it is on a created project from which we deleted one line of `module-info.java`:
+
+[source]
+----
+$ vidocq doctor
+Vidocq doctor — environment & project checks
+
+  ✔ Java version      Java 25
+  ✔ JAVA_HOME         /Users/me/.sdkman/candidates/java/25-tem
+  ✔ Maven wrapper     mvnw found
+  ✔ Vidocq project    pom.xml references the Vidocq runtime
+  ✔ Config            vidocq.properties — 1 key, all recognized
+  ✔ Extensions        2 extensions in the runtime dependencies
+  ✔ Codegen bundles   1 wired by vidocq-runtime-maven-plugin
+  ✔ Vauban indexer    wired by vidocq-runtime-maven-plugin
+  ✘ Module directives missing from module-info.java — cassini-rest: requires jakarta.ws.rs
+       ↳ The application does not compile, or the module path refuses it.
+       ↳ Fix: vidocq doctor --fix
+  ✔ Maven version     Maven 3.9.16 (wrapper)
+  ✔ HTTP port         8080 is free
+
+✘ One or more checks failed — see the hints above.
+  11 checks — 10 ok, 0 warning(s), 1 failed
+
+$ vidocq doctor --fix
+✔ module-info.java updated  (requires/opens for cassini-rest)
+  …
+✔ No blocking issues found.
+  11 checks — 11 ok, 0 warning(s), 0 failed
+----
+
+// DRAFT(#339): outputs taken on a 0.4.0-SNAPSHOT build of #352 + #356 + the codegen wiring; re-run on RC1.
 
 === A CLI that says less and helps more
 
@@ -365,7 +401,7 @@ A few smaller things, each from the audit:
 
 == Your first ten minutes with 0.4.0-RC1
 
-// DRAFT(#339): run this whole section on the RC1 build and paste the real outputs.
+// DRAFT(#339): run on 2026-10-25 with a 0.4.0-SNAPSHOT build of #352 + #356 + the codegen wiring (create, doctor, extension add, build jlink: 5 s, image 40 MB, start 121.7 ms); re-run on RC1.
 
 Install the CLI. It is a self-contained distribution from Maven Central; no Maven involved:
 
@@ -384,12 +420,22 @@ cd todo
 
 You get a pom on the application parent with your own version, a `module-info.java`, a REST resource, a
 `vidocq.properties`, a first test that boots the application and calls the resource, a Maven wrapper, a
-`.gitignore` and a README. `vidocq doctor` has nothing to say:
+`.gitignore` and a README:
 
-[source,bash]
+[source]
 ----
-vidocq doctor
+.gitignore
+README.md
+mvnw
+mvnw.cmd
+pom.xml
+src/main/java/com/example/todo/HelloResource.java
+src/main/java/module-info.java
+src/main/resources/vidocq.properties
+src/test/java/com/example/todo/HelloResourceTest.java
 ----
+
+`vidocq doctor` has nothing to say: `11 checks — 11 ok, 0 warning(s), 0 failed`.
 
 Start dev mode, open the dev console on `http://127.0.0.1:8888/`, and edit `HelloResource`: the next request
 answers with your change about three seconds after you save.
