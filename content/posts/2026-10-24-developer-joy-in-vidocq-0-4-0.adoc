@@ -158,8 +158,8 @@ of thing that costs a newcomer time while every maintainer has long stopped seei
 * The created application took the runtime's version: `demo-app-0.4.0-SNAPSHOT.jar`.
 * The created pom carried two workarounds, with comments, for bugs of 0.2.0 fixed months ago.
 * `vidocq create --name demo-app` wrote a class called `DemoAppApp`.
-* Every build printed three javac warnings, and a note telling you to add a `provides` to `module-info.java` that a
-  Vidocq application does not need.
+* Every build told you to add a `provides` to `module-info.java` that a Vidocq application does not need.
+* Every build printed three javac warnings that nobody explained.
 * The catalog described `mansart-data` as Jakarta Persistence; it is Jakarta Data.
 * `vidocq extension add mansart-persistence` wrote a coordinate that does not exist, because that extension had no
   descriptor.
@@ -167,9 +167,11 @@ of thing that costs a newcomer time while every maintainer has long stopped seei
   listed it and the build was right.
 
 None of them breaks a running application. All of them make a first project look less finished than the runtime
-under it. 0.4.0-RC1 fixes all eleven, each with a test that would have caught it.
-
-// DRAFT(#339): check that each of #328–#338 is closed before publishing; adjust this paragraph otherwise.
+under it. 0.4.0-RC1 fixes ten of them, each with a test that would have caught it. The eleventh, the javac warnings,
+we kept on purpose: javac says that the classes Vauban writes in its last round will not be processed again, which is
+exactly what Vauban wants, and silencing it would mean turning off a check you may need for your own processors. The
+getting-started guide now says so, next to the three lines you will see, and an integration test fails the build of a
+created project on any *other* warning.
 
 The audit also showed something no single bug captures: *how much configuration an application carries*. Adding
 REST to an application meant three places. A dependency. A codegen bundle in the compiler's
@@ -179,23 +181,26 @@ job was to police that configuration. Tools that check what you wrote are good; 
 
 == Step three: what an application no longer carries
 
-// DRAFT(#339): this section describes the RC1 target of the umbrella issue. Rewrite each item as shipped, or drop it.
-
 === An application BOM, and a parent made for applications
 
-Until now, a created application inherited `vidocq-runtime-parent`, the parent of the runtime's *own* build. It
-worked, but your application got our CI settings, our SonarQube configuration and the TCK list of our repository.
+Until now, a created application inherited `vidocq-runtime-parent`, which was the root of the runtime's *own*
+build. It worked, but your application got our CI settings, our SonarQube configuration, the TCK list of our
+repository, and a SNAPSHOT of a library it never used.
 
-0.4.0 separates them:
+0.4.0 separates them, and keeps the name you already have in your pom:
 
 * `vidocq-runtime-bom` manages the version of every artifact an application may declare: the runtime, every
-  extension, its codegen bundle, its dev-console companion, the test support. Import it, and your pom names
-  extensions without versions, with or without our parent.
-* An application parent that imports the BOM and carries only what an application needs: the compiler release, the
-  Vauban indexer, and the Vidocq plugin with its checks and packaging.
+  extension, its codegen bundle, its dev-console companion, the test support. A reactor test fails when a published
+  module is missing from it.
+* `vidocq-runtime-parent` becomes a parent made for applications. It imports the BOM and carries only what an
+  application needs: Java 25, the Vauban indexer, pinned Maven plugins, and the Vidocq plugin with its checks and
+  packaging. Both are published flattened: no parent, no profile, nothing of ours.
+* The runtime's own build moved to `vidocq-runtime-build`, which no application inherits.
 
-`vidocq create` uses the application parent. Teams that have their own corporate parent, like the author of #47,
-import the BOM instead.
+Upgrading is bumping one version. `vidocq create` and `vidocq extension add` stop writing versions on Vidocq
+artifacts, and a created application gets its own version, `1.0.0-SNAPSHOT`. Teams that have their own corporate
+parent, like the author of #47, import the BOM instead, and *we recommend that over copying anything from our
+parent*:
 
 [source,xml]
 ----
@@ -219,8 +224,69 @@ with an annotation processor, and extensions such as REST or Jakarta Data add th
 the 130 ms come from, and it is not negotiable. Making you write it twice is.
 
 With 0.4.0, the Vidocq plugin, declared as a build extension, puts the codegen bundle of each Vidocq extension in your
-dependencies on the compiler's processor path itself. Adding an extension is one dependency again, and `checkpom`
-becomes a safety net rather than a daily error.
+dependencies on the compiler's processor path itself. The application parent declares it that way, so the
+`maven-compiler-plugin` block disappears from a created pom. Adding an extension is one dependency again, and
+`checkpom` becomes a safety net rather than a daily error. Under your own parent, one attribute does the same:
+
+[source,xml]
+----
+<plugin>
+    <groupId>io.vidocq.runtime</groupId>
+    <artifactId>vidocq-runtime-maven-plugin</artifactId>
+    <version>0.4.0</version>
+    <extensions>true</extensions>
+</plugin>
+----
+
+We did not take this step lightly, because injecting configuration that the IDE cannot see is how you get a build
+that works on the command line and an IDE that compiles without your processors. So we checked before we
+shipped. On a created project with its codegen path removed, Maven 3.9.16 (the version of the wrapper `create`
+writes), the same offline, 3.9.9, 3.9.11 and 4.0.0-rc-5 all build it, and IntelliJ IDEA 2026.2's Maven import
+writes *the same processor path, entry for entry*, as with the explicit path. A path you already declared is kept
+and never doubled, so a 0.3.0 pom builds unchanged.
+
+One check paid for itself on the spot. Our first version registered the participant the modern way, with
+`@Named`, and on Maven 3.9.9 it simply never ran: no error, no warning. 3.9.9 reads that registration with a
+library too old for Java 25 class files and skips the component. A prototype compiled for Java 17 ran fine, which is
+how we found it. The plugin now registers it in a Plexus descriptor, every Maven version above runs it, and a test
+keeps it that way.
+
+=== A first test, on day one
+
+TDD is a rule of our ecosystem, and `vidocq create` used to write a project with nothing to test it with:
+`vidocq test` had nothing to run. 0.4.0 adds `vidocq-runtime-junit` and its `@VidocqTest` annotation. A test class
+gets the application started in a JVM of its own, on a free port, once for the class, and stopped after its last
+test:
+
+[source,java]
+----
+@VidocqTest
+class HelloResourceTest {
+
+    @Test
+    void saysHello(VidocqApplication application) {
+        VidocqResponse response = application.get("/hello");
+
+        assertEquals(200, response.status());
+        assertEquals("Hello from Vidocq!", response.body());
+    }
+}
+----
+
+That is the test `vidocq create -x cassini-rest` now writes, with the two test dependencies it needs, no version
+on either. It runs in well under a second, boot included. The application under test is the real one, on the
+module path of your tests, with your `vidocq.properties`: no mock container, no special mode.
+
+One detail of the design came from a failure. Our first sketch had the test call the application with
+`java.net.http.HttpClient`, and it failed with an `IllegalAccessError`: a test that Surefire patches into your
+application module reads only what that module reads, and an application has no reason to require
+`java.net.http`. So `VidocqApplication` carries the HTTP calls (`get`, `post`, `request`), from a jar that reads the
+module for you.
+
+The created project is finished in other ways too: a Maven wrapper, a `.gitignore`, a README with the commands that
+work, and, when you leave out `--name` on a terminal, three questions (name, group, extensions from the catalog)
+instead of an error. An integration test creates a REST application on every pull request, runs a real
+`mvn verify` on it offline, and fails on a missing test run, a missing launcher, or a warning we did not expect.
 
 === What stays explicit, and why
 
