@@ -12,7 +12,7 @@ tags: [cli, maven, developer-experience, getting-started, release]
 
 image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
 
-A runtime can boot in 130 milliseconds and still lose a new user in the first ten minutes. That is not spent in the
+A runtime can boot in 120 milliseconds and still lose a new user in the first ten minutes. That is not spent in the
 runtime. It is spent in the pom, in `module-info.java`, in a warning nobody explains, in a command that works one
 way and its Maven twin another. Vidocq 0.4.0 is the release where we went after those ten minutes.
 
@@ -132,10 +132,10 @@ The runtime side was already where we want it:
 
 [cols="3,2"]
 |===
-| Measured on an Apple M5 Max, JDK 25, application `demo-app` with REST + Health | Result
+| Measured on an Apple M5 Max, JDK 25, a created application with REST + Health | Result
 
 | Runtime start (`vidocq start`, startup report)
-| 130 ms
+| 111 ms
 
 | `vidocq dev`, from the command to the first answer (compile included)
 | about 10 s
@@ -144,10 +144,11 @@ The runtime side was already where we want it:
 | about 3 s
 
 | `vidocq build jlink`, then the image's own launcher: runtime start
-| 133 ms (726 ms for the whole process)
+| 119 ms (231 ms for the whole process, image 40 MB)
 |===
 
-// DRAFT(#339): re-measure on the RC1 build and record the figures in vidocq's BENCH.md before publishing.
+// DRAFT(#339): start figures from vidocq's BENCH.md entry of 2026-10-25 (0.4.0-SNAPSHOT); the dev-mode rows come from
+// the audit and have no entry yet. Re-measure all four on the RC1 build, record them in BENCH.md, then publish.
 
 The first contact was not. We logged eleven bugs, each with its issue and its `BUG.md` entry
 (https://codefloe.com/Vidocq/vidocq/issues/339[vidocq#339] lists them). A few of them, because they show the kind
@@ -221,7 +222,7 @@ parent*:
 
 Vidocq does at build time what other runtimes do at startup: Vauban indexes your beans and generates their proxies
 with an annotation processor, and extensions such as REST or Jakarta Data add their own processors. That is where
-the 130 ms come from, and it is not negotiable. Making you write it twice is.
+the 120 ms come from, and it is not negotiable. Making you write it twice is.
 
 With 0.4.0, the Vidocq plugin, declared as a build extension, puts the codegen bundle of each Vidocq extension in your
 dependencies on the compiler's processor path itself. The application parent declares it that way, so the
