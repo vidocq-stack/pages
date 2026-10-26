@@ -1,5 +1,5 @@
 ---
-title: "Vidocq 0.4.0-RC1: Servlet, Pages and Expression Language, MicroProfile 7.2, and a Development Loop That Finishes the Job"
+title: "Vidocq 0.4.0-RC1 Is Out: Servlet 6.1, Pages, MicroProfile 7.2 and a Better Development Loop"
 description: "The first release candidate of 0.4.0 puts eighteen families on Maven Central: Jakarta Servlet 6.1 through Foy, two new bricks (Pages and Expression Language), MicroProfile 7.2, a CLI and a Maven plugin that are one tool, a dev console, new TCK figures and the first SonarQube numbers."
 date: 2026-10-26
 draft: true
@@ -127,7 +127,7 @@ tests.
 
 A Vaadin application runs on Vidocq, in dev mode with `vidocq:dev`, packaged with `vidocq:package`, and in a jlink
 image. The story of how we got there, and of what we asked from Vaadin, is in
-link:/posts/vaadin-on-vidocq/[its own post]; what changed in the runtime is that every fix it required is now generic:
+link:/posts/vaadin-on-vidocq-from-vidocq-dev-to-a-68-mb-jlink-image/[its own post]; what changed in the runtime is that every fix it required is now generic:
 
 * *The application layer can hold the application's dependencies* (`vidocq.app.layer=all`), because Vaadin's
   framework code is application code.
