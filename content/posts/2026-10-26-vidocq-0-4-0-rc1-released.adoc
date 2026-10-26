@@ -11,7 +11,7 @@ tags: [release, jakarta-ee, microprofile, tck, servlet, cli, quality, developer-
 // and refresh every block marked `DRAFT(#…)` against the released build (Vidocq/vidocq#339).
 // The doc.vidocq.dev links below point at the 0.4.0-RC1 line: publish after the docs cut is merged.
 
-image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+image::/images/posts/2026-10-26-banner.jpeg["Viduke raises one arm on a Paris rooftop at night while eighteen glowing lanterns rise in an arc toward a ribbon that reads RC1",role=blog-banner]
 
 Vidocq 0.4.0-RC1 is on Maven Central. As for 0.3.0, the whole family went out together: *eighteen families*, tagged
 `v0.4.0-RC1`, from `vidocq-parent` to the runtime and its CLI. Two of them, Peano and Ibarra, are released for the
@@ -40,6 +40,23 @@ The sections below take them in that order. The last one lists the fixes, brick 
 0.4.0-RC1 line of the https://doc.vidocq.dev/vidocq/0.4.0-RC1/whats-new.html[documentation]; each brick keeps its own
 _What's new_ page, which says what landed after 0.3.0 and links to the section that documents it.
 
+.In this post
+* <<servlet,Jakarta Servlet 6.1, through Foy>>
+* <<peano-ibarra,Two new bricks: Peano and Ibarra>>
+* <<microprofile,MicroProfile 7.2>>
+* <<containers,Every brick on any CDI container>>
+* <<vaadin,Vaadin>>
+* <<developer-joy,Developer joy: one tool, from `vidocq create` to a jlink image>>
+* <<dev-loop,A development loop>>
+* <<dev-extensions,Dev extensions: bring your own panel>>
+* <<tck,New TCK figures>>
+* <<quality,Quality, and where it stands>>
+* <<upgrade,What changes when you upgrade from 0.3.0>>
+* <<try-it,Try it>>
+* <<next,What is next>>
+* <<fixes,Fixes since 0.3.0>>
+
+[#servlet]
 == Jakarta Servlet 6.1, through Foy
 
 Foy, the Servlet implementation of the family, was a standalone brick in 0.3.0. In 0.4.0 it is a Vidocq extension,
@@ -75,6 +92,7 @@ The seven skipped tests are server push, which Chappe does not implement. When w
 1714. The road from there is the 34 Servlet fixes of the last section: sessions, dispatching, async, upgrade, error
 pages, security. One limit is stated plainly in the documentation: the session scope is Vauban-only in Foy for now.
 
+[#peano-ibarra]
 == Two new bricks: Peano and Ibarra
 
 *Peano* implements Jakarta Expression Language 6.0, and passes the official TCK, 361 tests out of 361, on Temurin 25.
@@ -89,6 +107,7 @@ ibarra-pages`. The Bistro example shows pages next to servlets.
 
 Both ship named Java modules, like every brick, and both are documented on the 0.4.0-RC1 line.
 
+[#microprofile]
 == MicroProfile 7.2
 
 The runtime now targets MicroProfile 7.2, and the three specifications that changed are implemented:
@@ -108,6 +127,7 @@ the Eclipse Foundation. We ran the TCKs of the release candidates, which are byt
 are green. We will run them again on the finals the day they are on Maven Central, and not before we say
 "MicroProfile 7.2 compatible".
 
+[#containers]
 == Every brick on any CDI container
 
 A brick should not need Vauban to be correct, and Vauban should not be the only thing proving it. Each brick now
@@ -123,6 +143,7 @@ included, into a 500. A brick now depends on APIs, and its Vidocq extension brin
 each brick proven on Open Liberty says which server features to keep off, in a `WARNING` block its Open Liberty module
 tests.
 
+[#vaadin]
 == Vaadin
 
 A Vaadin application runs on Vidocq, in dev mode with `vidocq:dev`, packaged with `vidocq:package`, and in a jlink
@@ -142,6 +163,7 @@ and `vidocq:run` answered 500, because nothing had built the project. `vidocq:de
 and says so. We found it by checking the release candidate against a real Vaadin application, which is why the check
 exists.
 
+[#developer-joy]
 == Developer joy: one tool, from `vidocq create` to a jlink image
 
 A runtime can boot in 120 milliseconds and still lose a new user in the first ten minutes. That is not spent in the
@@ -627,6 +649,7 @@ vidocq build jlink
 
 And if your team prefers Maven alone, every step above has its goal, from `vidocq:create` to `vidocq:jlink`.
 
+[#dev-loop]
 == A development loop
 
 The runtime boots in about 120 milliseconds; a loop that tells you nothing about what it started wastes them. 0.4.0
@@ -637,6 +660,9 @@ mode (`dev`, `test` or `prod`, with the signal it was read from) and the debugge
 before `Started in`: the listeners with the address they really bound (so `port=0` prints the real port), the REST
 routes, the Servlet context, the migrations. A terminal gets the banner, a container or CI gets one log line, and the
 console logs are one aligned line per record unless you configured logging yourself.
+
+.The first panel of the console, the startup report of this boot: launch mode, phases in milliseconds, the module layer. Anomalies: none.
+image::/images/posts/rc1/console-startup.png["The Startup panel of the Vidocq dev console: launch mode dev, phase timings and the module layer"]
 Every jar built on `vidocq-parent` carries `META-INF/vidocq/build-info/<artifactId>.properties`, so a stack trace that
 mixes two builds can be told apart at a glance.
 
@@ -672,6 +698,15 @@ a JDQL editor with CSV export and import, and, for each pool, its tables and a S
 application's own `/mcp`
 |===
 
+.The REST panel, live. 411 requests after a short burst: the status classes, the handler time and five minutes of history.
+image::/images/posts/rc1/console-rest.png["The REST panel of the dev console: request counters, response classes and live charts"]
+
+.The CDI panel: every bean of the container with its kind, scope and qualifiers, then the interceptors with the way each one is wired.
+image::/images/posts/rc1/console-cdi.png["The CDI panel of the dev console: a table of the container's beans with kind, scope and qualifiers"]
+
+.The Logs panel: the last records, and a field to set the level of any logger without a restart.
+image::/images/posts/rc1/console-logs.png["The Logs panel of the dev console: recent records, counters and a form to set a log level"]
+
 The actions are behind an origin check and a token generated at each boot, and the five minutes of history behind
 every chart live on the server, so a hidden tab loses nothing. The console is a development tool and stays one: it
 is added by `vidocq:dev` itself, so there is nothing to declare, and the `-dev` panel modules are never packaged.
@@ -696,6 +731,91 @@ launcher does. `vidocq:dev` passes `-Dvidocq.*` on to the application. The debug
 it used to listen on every interface. Every main shape Java 25 accepts starts the application. A boot that fails stops
 what it had already started. Schema migrations find their scripts where the application runs, in the module layer.
 
+[#dev-extensions]
+== Dev extensions: bring your own panel
+
+The panels above are not special. Each one is a *dev extension*, written against two small interfaces that an
+extension of yours can use as well. An extension already says, once per boot, what it found: that is its section of
+the startup report. A panel adds what it is *doing*: values sampled about once a second, the charts to draw, and
+optionally actions.
+
+.A panel is an extension that has something to say: Viduke slides a new module into the console.
+image::/images/posts/rc1/dev-extensions.jpeg["Viduke in a workshop under the Paris rooftops slides a small glowing module into a slot of a console covered with gauges and screens; other modules are already plugged in"]
+
+There are two shapes. The *all-in-one* one is the shortest: your extension class is also the panel.
+
+[source,java]
+----
+public final class AcmeCacheExtension implements VidocqExtension, DevConsolePanel {
+
+    private static final List<Chart> CHARTS = List.of(
+            new Chart("entries", "Entries", List.of(Series.area("entries"), Series.ceiling("entries"))));
+
+    private volatile AcmeCache cache;           // set in onStart, cleared first in onStop
+
+    public String id() { return "acme-cache"; }                               // the section, the tab
+
+    public void contribute(StartupReportContext context, StartupReportSection section) {
+        AcmeCache c = cache;                                                  // boot facts, once per boot
+        section.summary(c == null ? "not started" : c.capacity() + " entries max");
+    }
+
+    public List<Chart> charts() { return CHARTS; }                            // what the page plots
+
+    public void sample(PanelSample out) {                                     // live values, every poll
+        AcmeCache c = cache;
+        if (c == null) return;
+        out.gauge("entries", c.size(), c.capacity(), Unit.COUNT)
+           .counter("hits", c.hits(), Unit.COUNT);
+    }
+}
+----
+
+That is the whole panel: `contribute` for the boot facts, `charts` and `sample` for the live half. It depends on
+`vidocq-runtime-devconsole-spi`, an API jar of five small types, and nothing else of the console.
+
+The catch is in the word *all-in-one*: whatever implements `DevConsolePanel` ships in every binary that has the
+extension, whether or not anyone ever runs `vidocq:dev`. So the extensions of the runtime itself, Cassini's REST
+mounts, Knock's health, Dirac's metrics, Mansart's pools, the schema migrations, the MCP server, use the *split* shape:
+
+[cols="1,2,2"]
+|===
+| Module | Holds | Depends on
+
+| The brick
+| Its read-only public API: a counter kept in memory, a registry, a snapshot
+| Nothing of the console
+
+| The runtime extension
+| The integration and the startup-report section: boot facts, in every mode, production logs included
+| `vidocq-runtime-spi`, never the console
+
+| The `-dev` module
+| The live panel: sampled values, charts, actions, as a `LivePanel` service
+| The runtime extension and `vidocq-runtime-devconsole-spi`
+|===
+
+The `-dev` module is a small Java module next to the extension, with the same parent and version, the artifact id
+suffixed `-dev` and the module name suffixed `.dev`. `vidocq:dev` alone puts it on the module path of the application
+it starts. *Nothing else ever depends on it, and nothing that gets packaged contains it*: a jlink image or a `-dist`
+archive of your application never carries a panel, and the brick it describes does not even know that the console
+exists. The Health panel of Knock, below, is one of these.
+
+.The Health panel, a `-dev` module of the Knock extension: the checks of the application and their last result.
+image::/images/posts/rc1/console-health.png["The Health panel of the dev console: the health checks of the application and their results"]
+
+A few rules keep a panel harmless, and the console documents them as a contract: `sample` reads *memory only*, never
+blocks, never creates a bean, and never puts a secret in a value. An action, the kind of button the migration panel
+offers, goes through the origin check and the per-boot token described above. And since the dev MCP server shows the
+console's panels to coding agents as read-only tools, a panel that keeps its values honest and free of secrets is
+also one an agent can safely read.
+
+Both shapes, the tests that go with them and a checklist are in
+https://doc.vidocq.dev/vidocq/0.4.0-RC1/dev-console-panels.html[Writing a dev console panel]. If you maintain an
+extension with a state worth watching, a cache, a pool, a queue, a client, the panel is a few dozen lines, and
+`vidocq:dev` shows it from then on.
+
+[#tck]
 == New TCK figures
 
 The TCKs are the part of this release we trust most, because we do not write them. Official suites, run on Temurin 25;
@@ -764,6 +884,7 @@ Persistence and Messaging are not in this release candidate.
 
 // DRAFT(#339): figures from the frozen docs/0.4.0-RC1 tck pages (runtime re-run 2026-10-04, Servlet 2026-10-19). Re-run the runtime suites on the tagged RC1 before publishing.
 
+[#quality]
 == Quality, and where it stands
 
 Until this month, quality at Vidocq meant tests and TCKs. On 21 October we added the other half. SonarQube runs on our
@@ -771,6 +892,9 @@ own infrastructure, at https://sonar.vidocq.dev, behind the same single sign-on 
 coverage. A shared action of our CI runs the analysis on the pull requests of each brick and posts one comment
 on it. It runs in *report mode*: it never blocks a merge. A merge still means reading the comment, and we learned that
 on the second day, when a pull request with a new finding went in and turned Chappe's gate red on `main`.
+
+.Seventeen bricks, three of them green. The others are not hidden: they are amber, and we say so below.
+image::/images/posts/rc1/quality-bricks.jpeg["Viduke leans over a row of seventeen stone bricks on a ledge above Paris with a clipboard and a magnifying glass; three bricks glow green with a check mark, the others glow amber"]
 
 The first thing it did was to measure honestly. Chappe showed 14.7% coverage, which was false: its tests live in other
 modules and JaCoCo read each module alone. With one aggregate report, the figure was 82.7%. Then we cleaned, brick
@@ -830,6 +954,7 @@ gate becomes blocking when we have reviewed that brick, at 0.4.0.
 
 // DRAFT(#285): figures read from SonarQube on 2026-10-26 (main branches). Refresh them on the publication day.
 
+[#upgrade]
 == What changes when you upgrade from 0.3.0
 
 Most of it is additions. These need an action, or a look:
@@ -858,6 +983,7 @@ Most of it is additions. These need an action, or a look:
 * *JPA left Mansart.* Jakarta Persistence is a project of its own now, Noether; Mansart keeps Jakarta Data and
   Transactions. Noether is not in this release candidate.
 
+[#try-it]
 == Try it
 
 0.4.0-RC1 is the latest release on Maven Central, so the installer picks it up:
@@ -884,6 +1010,7 @@ https://doc.vidocq.dev/vidocq/0.4.0-RC1/tck.html[TCK page] are on the 0.4.0-RC1 
 does not work, tell us on https://codefloe.com/Vidocq/vidocq/issues[CodeFloe]: a release candidate is the moment when a
 report costs us the least.
 
+[#next]
 == What is next
 
 `0.4.0` is planned for the end of November: the MicroProfile 7.2 finals once they are on Maven Central, the TCKs run
@@ -893,6 +1020,7 @@ belongs with the web project initializer we want at `start.vidocq.dev`
 (https://codefloe.com/Vidocq/vidocq/issues/17[vidocq#17]). And we will keep doing the empty-directory audit before every
 release, because the bugs it finds are the ones we no longer see.
 
+[#fixes]
 == Fixes since 0.3.0
 
 Every bug we reproduce goes into the `BUG.md` of its repository, with a symptom, a minimal reproduction and a status.
