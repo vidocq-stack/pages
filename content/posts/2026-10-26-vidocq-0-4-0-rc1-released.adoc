@@ -2,14 +2,10 @@
 title: "Vidocq 0.4.0-RC1 Is Out: Servlet 6.1, Pages, MicroProfile 7.2 and a Better Development Loop"
 description: "The first release candidate of 0.4.0 puts eighteen families on Maven Central: Jakarta Servlet 6.1 through Foy, two new bricks (Pages and Expression Language), MicroProfile 7.2, a CLI and a Maven plugin that are one tool, a dev console, new TCK figures and the first SonarQube numbers."
 date: 2026-10-26
-draft: true
 layout: post
-authors: [yannblazart]
+authors: [yannblazart, antoinesabotdurand]
 tags: [release, jakarta-ee, microprofile, tck, servlet, cli, quality, developer-experience]
 ---
-// DRAFT — publish with 0.4.0-RC1, then: set `date` and the file name to the publication day, remove `draft: true`,
-// and refresh every block marked `DRAFT(#…)` against the released build (Vidocq/vidocq#339).
-// The doc.vidocq.dev links below point at the 0.4.0-RC1 line: publish after the docs cut is merged.
 
 image::/images/posts/2026-10-26-banner.jpeg["Viduke raises one arm on a Paris rooftop at night while eighteen glowing lanterns rise in an arc toward a ribbon that reads RC1",role=blog-banner]
 
@@ -301,8 +297,6 @@ The runtime side was already where we want it:
 | 119 ms (231 ms for the whole process, image 40 MB)
 |===
 
-// DRAFT(#339): rows 1 and 4 are close to what the published RC1 gives (image launcher: 120 to 126 ms, 5 s build, 40 MB, 2026-10-26).
-// The dev-mode rows come from the audit and have no BENCH.md entry yet: re-measure on RC1 and record them in BENCH.md, then publish.
 
 The first contact was not. We logged eleven bugs, each with its issue and its `BUG.md` entry
 (https://codefloe.com/Vidocq/vidocq/issues/339[vidocq#339] lists them). A few of them, because they show the kind
@@ -538,7 +532,6 @@ $ vidocq doctor --fix
   11 checks — 11 ok, 0 warning(s), 0 failed
 ----
 
-// DRAFT(#339): outputs taken on a 0.4.0-SNAPSHOT build of #352 + #356 + the codegen wiring; re-run on RC1.
 
 ==== A CLI that says less and helps more
 
@@ -581,7 +574,6 @@ the CLI loses nothing.
 
 === Your first ten minutes with 0.4.0-RC1
 
-// DRAFT(#339): create, doctor (11 checks, 11 ok), build jlink (5 s, image 40 MB) and the image launcher (120 to 126 ms on three runs) were re-run on the published RC1 on 2026-10-26; `vidocq dev`, `test` and `extension add` were run on the 0.4.0-SNAPSHOT of 2026-10-25: re-run them on RC1.
 
 Install the CLI. It is a self-contained distribution from Maven Central; no Maven involved:
 
@@ -882,7 +874,6 @@ That is *1888 MicroProfile tests* on the assembled runtime, and 1707 for Servlet
 Telemetry and OpenAPI runs use the release candidates of the 7.2 TCKs, for the ballot reason given above. And Jakarta
 Persistence and Messaging are not in this release candidate.
 
-// DRAFT(#339): figures from the frozen docs/0.4.0-RC1 tck pages (runtime re-run 2026-10-04, Servlet 2026-10-19). Re-run the runtime suites on the tagged RC1 before publishing.
 
 [#quality]
 == Quality, and where it stands
@@ -952,7 +943,6 @@ Sonar and JaCoCo are the only analysis tools in place. Error Prone, NullAway, a 
 dependencies, an architecture test and an API-compatibility check are planned, in report mode first, and each brick's
 gate becomes blocking when we have reviewed that brick, at 0.4.0.
 
-// DRAFT(#285): figures read from SonarQube on 2026-10-26 (main branches). Refresh them on the publication day.
 
 [#upgrade]
 == What changes when you upgrade from 0.3.0
@@ -1151,4 +1141,4 @@ was registered (20261018-01); an application-layer module requiring a JDK module
   becomes a `BadRequestException` as §4.2.4 requires; a REST resource without a scope is no longer a 404; `writeTimeout`
   is actually applied and connections close gracefully so the last response survives; `@Enumerated` is honoured.
 
-_Transparency: the audit described here was run, and this post drafted, with the help of Claude, which also wrote part of the code it talks about. The decisions, the measurements we kept and the opinions are mine._
+_Transparency: the audit described here was run, and this post drafted, with the help of Claude, which also wrote part of the code it talks about. The decisions, the measurements we kept and the opinions are ours._
