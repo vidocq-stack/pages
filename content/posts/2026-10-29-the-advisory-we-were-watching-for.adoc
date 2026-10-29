@@ -1,0 +1,97 @@
+---
+title: "The Advisory We Were Watching For: OpenTelemetry's tracestate DoS"
+description: In September we wrote that the OpenTelemetry API was one of the few third-party artifacts we ship, and the one we watch advisories for. On October 29 that watch paid off. Here is what GHSA-ccrj-gw8r-854m meant for Vidocq, what we measured, and what the upgrade took.
+date: 2026-10-29
+layout: post
+authors: [yannblazart]
+tags: [security, cve, opentelemetry, humboldt, microprofile]
+---
+
+In September we wrote about
+link:/posts/not-affected-by-cve-2026-33701-and-why-that-s-not-the-whole-story/[a critical OpenTelemetry CVE that did
+not reach Vidocq]. We ended that post with a promise: the OpenTelemetry **API** is one of the few third-party
+artifacts we ship, and it is exactly the kind of dependency we watch advisories for.
+
+This time the advisory did reach us. Here is the honest account.
+
+== What the advisory says
+
+https://github.com/advisories/GHSA-ccrj-gw8r-854m[GHSA-ccrj-gw8r-854m] affects `io.opentelemetry:opentelemetry-api`
+up to 1.66.0 and is fixed in 1.67.0. The W3C trace-context propagator parses the `tracestate` request header with a
+regular expression that backtracks. A header with a long run of spaces or tabs and no comma after it is parsed in
+**quadratic** time. One unauthenticated request can keep a CPU busy. The CVSS score is low (availability only),
+and that is fair: nothing leaks and nothing executes. But it is a denial-of-service lever available to anyone who
+can send an HTTP header.
+
+== Were we exposed? Yes
+
+**Humboldt**, our MicroProfile Telemetry implementation, writes its own SDK, but it uses the standard
+`W3CTraceContextPropagator` from the OpenTelemetry API to read `traceparent` and `tracestate`. That is the point of
+the API: your traces have to interoperate with everyone else's. So on every incoming request carrying a
+`tracestate` header, the vulnerable parser ran.
+
+The advisory surfaced in our own pipeline first: SonarQube's dependency scanner flagged the jar, and Humboldt's
+security rating dropped from A to C. We did not have to be told.
+
+== How bad, in numbers
+
+We measured the extraction of one crafted header on a laptop. The numbers are indicative, but the trend is clear:
+
+[cols="1,1,1",options="header"]
+|===
+| `tracestate` size | OpenTelemetry 1.66.0 | OpenTelemetry 1.67.0
+| 1 KB    | 1 ms     | < 1 ms
+| 10 KB   | 159 ms   | < 1 ms
+| 40 KB   | 2.5 s    | < 1 ms
+| 80 KB   | 10 s     | < 1 ms
+|===
+
+Doubling the header quadruples the time: that is the quadratic curve. **Chappe**, our HTTP server, caps request
+headers at 8 KiB by default, which bounds the damage. In that worst realistic case, a header that fills the limit
+still costs about **0.1 s of CPU per request**. About ten such requests per second are enough to keep one core
+fully busy. Raise `maxHeaderSize` and the numbers above apply.
+
+== The fix, and why it was not a one-line bump
+
+The fix is upstream: OpenTelemetry Java 1.67.0. Upgrading should have been a version property. It was not quite,
+and the reason is worth telling.
+
+Vidocq runs on the module path, with strict Java modules everywhere. Upstream, the OpenTelemetry jars are automatic
+modules that export everything. Humboldt repackages the API and context jars with real module descriptors that
+export the internal packages *only* to the OpenTelemetry modules that use them. We compute those lists with
+`jdeps` over every stable jar of the OpenTelemetry BOM.
+
+In 1.67.0, the packages did not change, but who uses them did. The SDK and exporter jars started calling
+`io.opentelemetry.common.impl`. Our module-layer test caught it immediately: building an `SdkTracerProvider` on
+the module path failed with an `IllegalAccessError`. We re-ran the analysis on the 1.67.0 BOM and extended one
+qualified export to four modules. Without that test, the first application to add the official OpenTelemetry
+SDK next to Humboldt would have found it for us, at startup.
+
+== Checking that MicroProfile 7.2 still holds
+
+MicroProfile Telemetry 2.2 builds its TCK against OpenTelemetry 1.66.0. A newer, semver-compatible minor version is
+allowed, but "should be fine" is not a verification. So we ran the TCKs:
+
+* the MicroProfile Telemetry 2.2 TCK against Humboldt: **85/85** on 1.67.0;
+* the same TCK against the assembled Vidocq runtime, the one that certifies MicroProfile 7.2: **85/85** on 1.67.0.
+
+We also added a regression test: a 100,000-space `tracestate` must be extracted within two seconds. On 1.66.0 it
+times out; on 1.67.0 it returns at once.
+
+== What this changes for you
+
+* **Upgrade** to a Vidocq 0.4.0 SNAPSHOT dated October 29 or later. The next release includes the fix.
+* **No code change.** The OpenTelemetry API is unchanged for applications.
+* **If you cannot upgrade yet**, keep Chappe's default 8 KiB header limit. Your reverse proxy can also drop
+  `tracestate` headers longer than a few hundred bytes: the W3C specification limits `tracestate` to 32 list
+  members of 512 bytes.
+
+== The point of watching
+
+September's post said rewriting a stack moves the responsibility for its vulnerabilities onto us. That is true for
+the code we write. For the few artifacts we do not write, it means watching closely. This time, the watch worked
+the way it should: the scanner flagged it, a test proved the impact, the upgrade was verified against the TCKs, and
+the fix shipped the same day.
+
+If you find a security issue in any Vidocq component, please report it privately to the maintainers, through the
+disclosure channel in our governance repository, rather than in a public issue.
