@@ -7,12 +7,18 @@ authors: [yannblazart]
 tags: [security, cve, opentelemetry, humboldt, microprofile]
 ---
 
+image::/images/posts/2026-10-29-banner.jpeg["Viduke, the Vidocq detective, catching a CVE on the Paris rooftops at night",role=blog-banner]
+
+Vidocq takes care to fight the CVEs that can affect it, including the ones that come from the few libraries we do
+not write ourselves.
+
 In September we wrote about
 link:/posts/not-affected-by-cve-2026-33701-and-why-that-s-not-the-whole-story/[a critical OpenTelemetry CVE that did
 not reach Vidocq]. We ended that post with a promise: the OpenTelemetry **API** is one of the few third-party
 artifacts we ship, and it is exactly the kind of dependency we watch advisories for.
 
-This time the advisory did reach us. Here is the honest account.
+This time the advisory did reach us. Here is the honest account: what we found, what we measured, and how the fix
+went out the same day.
 
 == What the advisory says
 
@@ -36,6 +42,8 @@ security rating dropped from A to C. We did not have to be told.
 == How bad, in numbers
 
 We measured the extraction of one crafted header on a laptop. The numbers are indicative, but the trend is clear:
+
+image::/images/posts/2026-10-29-tracestate-race.jpeg["Viduke timing a race: an exhausted tortoise labelled 1.66 drags an endless scroll while a hare labelled 1.67 has already finished"]
 
 [cols="1,1,1",options="header"]
 |===
