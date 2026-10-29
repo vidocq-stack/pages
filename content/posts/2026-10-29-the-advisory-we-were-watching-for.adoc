@@ -18,7 +18,7 @@ not reach Vidocq]. We ended that post with a promise: the OpenTelemetry **API** 
 artifacts we ship, and it is exactly the kind of dependency we watch advisories for.
 
 This time the advisory did reach us. Here is the honest account: what we found, what we measured, and how the fix
-went out the same day.
+landed on the development line the same day.
 
 == What the advisory says
 
@@ -88,7 +88,9 @@ times out; on 1.67.0 it returns at once.
 
 == What this changes for you
 
-* **Upgrade** to a Vidocq 0.4.0 SNAPSHOT dated October 29 or later. The next release includes the fix.
+* **Know which build you run.** The fix is on the `0.4.0-SNAPSHOT` development line, not in 0.4.0-RC1:
+  RC1 still ships OpenTelemetry 1.66.0. Use a `0.4.0-SNAPSHOT` built on October 29 or later, or wait for
+  **0.4.0-RC2**, which will include the fix along with plenty of other surprises.
 * **No code change.** The OpenTelemetry API is unchanged for applications.
 * **If you cannot upgrade yet**, keep Chappe's default 8 KiB header limit. Your reverse proxy can also drop
   `tracestate` headers longer than a few hundred bytes: the W3C specification limits `tracestate` to 32 list
@@ -99,7 +101,7 @@ times out; on 1.67.0 it returns at once.
 September's post said rewriting a stack moves the responsibility for its vulnerabilities onto us. That is true for
 the code we write. For the few artifacts we do not write, it means watching closely. This time, the watch worked
 the way it should: the scanner flagged it, a test proved the impact, the upgrade was verified against the TCKs, and
-the fix shipped the same day.
+the fix was on the `0.4.0-SNAPSHOT` line the same day, on its way to RC2.
 
 If you find a security issue in any Vidocq component, please report it privately to the maintainers, through the
 disclosure channel in our governance repository, rather than in a public issue.
