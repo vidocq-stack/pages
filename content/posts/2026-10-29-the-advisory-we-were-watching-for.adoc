@@ -3,7 +3,7 @@ title: "The Advisory We Were Watching For: OpenTelemetry's tracestate DoS"
 description: In September we wrote that the OpenTelemetry API was one of the few third-party artifacts we ship, and the one we watch advisories for. On October 29 that watch paid off. Here is what GHSA-ccrj-gw8r-854m meant for Vidocq, what we measured, and what the upgrade took.
 date: 2026-10-29
 layout: post
-authors: [yannblazart]
+authors: [yannblazart, antoinesabotdurand]
 tags: [security, cve, opentelemetry, humboldt, microprofile]
 ---
 
