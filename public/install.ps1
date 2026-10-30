@@ -11,7 +11,7 @@ $ErrorActionPreference = 'Stop'
 
 $central     = 'https://repo1.maven.org/maven2/io/vidocq/runtime/vidocq-runtime-cli'
 # Every build of main publishes its SNAPSHOTs there.
-$snapshots   = 'https://central.sonatype.com/repository/maven-snapshots/io/vidocq/runtime/vidocq-runtime-cli'
+$snapshots   = 'https://maven.vidocq.dev/snapshots/io/vidocq/runtime/vidocq-runtime-cli'
 $installRoot = Join-Path $env:USERPROFILE '.vidocq\cli'
 
 function Say([string]$msg)  { Write-Host "-> $msg" -ForegroundColor Cyan }

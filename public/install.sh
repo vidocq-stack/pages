@@ -14,7 +14,7 @@ set -eu
 # VIDOCQ_CENTRAL override is for testing against a repository mirror.
 CENTRAL="${VIDOCQ_CENTRAL:-https://repo1.maven.org/maven2}/io/vidocq/runtime/vidocq-runtime-cli"
 # Every build of main publishes its SNAPSHOTs there.
-SNAPSHOTS="${VIDOCQ_SNAPSHOTS:-https://central.sonatype.com/repository/maven-snapshots}/io/vidocq/runtime/vidocq-runtime-cli"
+SNAPSHOTS="${VIDOCQ_SNAPSHOTS:-https://maven.vidocq.dev/snapshots}/io/vidocq/runtime/vidocq-runtime-cli"
 INSTALL_ROOT="${VIDOCQ_HOME:-$HOME/.vidocq}/cli"
 BIN_DIR="${VIDOCQ_BIN:-$HOME/.local/bin}"
 
