@@ -1,6 +1,6 @@
 ---
 title: "Vidocq SNAPSHOTs Move to maven.vidocq.dev"
-description: Every build of main now publishes the Vidocq SNAPSHOTs to our own Maven repository, maven.vidocq.dev, mirrored on a second site. Here is why, what it keeps, and the one line to change in a project that already uses the SNAPSHOTs.
+description: Every build of main now publishes the Vidocq SNAPSHOTs to our own Maven repository, maven.vidocq.dev, copied to a second site that takes over when the first is down. Here is why, what it keeps, and what to change in a project that already uses the SNAPSHOTs.
 date: 2026-10-30
 layout: post
 authors: [yannblazart]
@@ -33,18 +33,19 @@ run ourselves.
 
 * **Read access without an account.** `https://maven.vidocq.dev/snapshots/` is a plain Maven repository: browse
   it, point Maven or Gradle at it, `curl` it.
-* **A mirror on a second site.** `https://maven.bak.vidocq.dev/snapshots/` serves the same SNAPSHOTs from another
-  location, if the first one is down.
+* **A second site that takes over.** `https://maven.bak.vidocq.dev/snapshots/` is a full copy, refreshed every 10
+  minutes, on another site. Declare it right after the first one: when the first is down, Maven logs the error and
+  resolves from the next repository.
 * **A short, predictable history.** The repository keeps the **five latest builds** of each SNAPSHOT version, so you
   can step back a few builds when one breaks you. A SNAPSHOT version no build has touched for 30 days is removed;
   old lines such as `0.3.0-SNAPSHOT` do not linger.
 * **Only the CI publishes.** The CI is the only one that can write there, and only to the SNAPSHOT repository.
 
-== The one line to change
+== What to change in your pom.xml
 
-A project that already builds against a Vidocq SNAPSHOT declares Central's snapshot repository. Replace its URL, in
-both blocks: the Vidocq Maven plugin is a build extension, and Maven resolves build extensions from the plugin
-repositories only.
+A project that already builds against a Vidocq SNAPSHOT declares Central's snapshot repository. Replace it with these two
+repositories, in both blocks: the Vidocq Maven plugin is a build extension, and Maven resolves build extensions
+from the plugin repositories only.
 
 [source,xml]
 ----
@@ -55,11 +56,23 @@ repositories only.
         <releases><enabled>false</enabled></releases>
         <snapshots><enabled>true</enabled></snapshots>
     </repository>
+    <repository>
+        <id>vidocq-snapshots-bak</id>
+        <url>https://maven.bak.vidocq.dev/snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
+    </repository>
 </repositories>
 <pluginRepositories>
     <pluginRepository>
         <id>vidocq-snapshots</id>
         <url>https://maven.vidocq.dev/snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
+    </pluginRepository>
+    <pluginRepository>
+        <id>vidocq-snapshots-bak</id>
+        <url>https://maven.bak.vidocq.dev/snapshots/</url>
         <releases><enabled>false</enabled></releases>
         <snapshots><enabled>true</enabled></snapshots>
     </pluginRepository>
