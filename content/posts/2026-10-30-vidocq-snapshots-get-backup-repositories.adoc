@@ -1,0 +1,99 @@
+---
+title: "Vidocq SNAPSHOTs Get Backup Repositories"
+description: Every build of main still publishes the Vidocq SNAPSHOTs to Central's snapshot repository, and now also to our own Maven repository, maven.vidocq.dev, copied to a second site. Nothing to change in your project; here is how to add the backups if you want them.
+date: 2026-10-30
+layout: post
+authors: [yannblazart]
+tags: [maven, snapshots, infrastructure, ci]
+---
+
+image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
+
+Since July, every merge to `main` has published the Vidocq SNAPSHOTs to the Central Portal snapshot repository, as
+link:/posts/using-the-vidocq-snapshot-builds/[we described then]. That does not change. What is new: the same
+SNAPSHOTs now also land in two repositories we run ourselves.
+
+[cols="1,2"]
+|===
+| Repository | Role
+
+| `https://central.sonatype.com/repository/maven-snapshots/`
+| Central's snapshot repository, as before. **Nothing to change in your project.**
+
+| `https://maven.vidocq.dev/snapshots/`
+| Our own repository. Every build of `main` publishes there first.
+
+| `https://maven.bak.vidocq.dev/snapshots/`
+| A full copy of the previous one, refreshed every 10 minutes, on another site.
+|===
+
+Releases do not move: 0.4.0 and every release after it are published to Maven Central.
+
+== Why a second home
+
+On October 30, Central briefly refused the token our CI publishes with. The SNAPSHOTs of `main` stopped reaching
+Central's snapshot repository for a few hours, and the CI, which read its own SNAPSHOT dependencies with that same
+token, could not build `main` either.
+
+The SNAPSHOTs are the part of our publishing we use every hour, between repositories that depend on each other, so
+we no longer want a single point of failure there. The CI now publishes to `maven.vidocq.dev` first, then copies
+every build to Central. If the copy to Central fails, the build stays green and the SNAPSHOT is on our repositories
+anyway.
+
+== What our repositories offer
+
+* **Read access without an account.** Both are plain Maven repositories: browse them, point Maven or Gradle at them,
+  `curl` them.
+* **A second site that takes over.** Declare `maven.bak.vidocq.dev` right after `maven.vidocq.dev`: when the first is
+  down, Maven logs the error and resolves from the next repository.
+* **A short, predictable history.** They keep the **five latest builds** of each SNAPSHOT version, so you can step
+  back a few builds when one breaks you. A SNAPSHOT version no build has touched for 30 days is removed; old lines
+  such as `0.3.0-SNAPSHOT` do not linger.
+
+== Adding them as backups
+
+Keep Central's snapshot repository and add ours to the same blocks. Declare them in both: the Vidocq Maven plugin is
+a build extension, and Maven resolves build extensions from the plugin repositories only.
+
+[source,xml]
+----
+<repositories>
+    <!-- your existing central-snapshots repository stays here -->
+    <repository>
+        <id>vidocq-snapshots</id>
+        <url>https://maven.vidocq.dev/snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+    <repository>
+        <id>vidocq-snapshots-bak</id>
+        <url>https://maven.bak.vidocq.dev/snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+</repositories>
+<pluginRepositories>
+    <!-- your existing central-snapshots plugin repository stays here -->
+    <pluginRepository>
+        <id>vidocq-snapshots</id>
+        <url>https://maven.vidocq.dev/snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
+    </pluginRepository>
+    <pluginRepository>
+        <id>vidocq-snapshots-bak</id>
+        <url>https://maven.bak.vidocq.dev/snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
+    </pluginRepository>
+</pluginRepositories>
+----
+
+Then `mvn -U package` picks up the newest build, from whichever repository has it. A project created with
+`vidocq create --parent-version 0.4.0-SNAPSHOT` gets our two repositories already, and the SNAPSHOT CLI installer
+and `vidocq update` read `maven.vidocq.dev`.
+
+== Where to read more
+
+* https://doc.vidocq.dev[The documentation], "Trying a SNAPSHOT" in the CLI reference.
+* https://codefloe.com/Vidocq/ci/pulls/102[Vidocq/ci#102], the dual publication in our shared CI actions.

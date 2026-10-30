@@ -9,9 +9,9 @@ tags: [maven, snapshots, getting-started, java]
 
 image::/images/vidocq-banner.png[Vidocq banner,role=blog-banner]
 
-IMPORTANT: *Update, October 30, 2026.* The Vidocq SNAPSHOTs are no longer published to the Central Portal snapshot
-repository. They are now on our own repository, `https://maven.vidocq.dev/snapshots/`: replace the URL below with
-that one. See link:/posts/vidocq-snapshots-move-to-maven-vidocq-dev/[Vidocq SNAPSHOTs Move to maven.vidocq.dev].
+NOTE: *Update, October 30, 2026.* The Central Portal snapshot repository below still gets every Vidocq SNAPSHOT.
+They are now also published to `https://maven.vidocq.dev/snapshots/`, with a copy on `https://maven.bak.vidocq.dev/snapshots/`,
+which you can add as backups. See link:/posts/vidocq-snapshots-get-backup-repositories/[Vidocq SNAPSHOTs Get Backup Repositories].
 
 Vidocq releases land on Maven Central, but the interesting things often happen *between*
 releases — like the https://vidocq.dev/blog[multi-module Java Modules fix] that ships in
