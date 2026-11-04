@@ -7,6 +7,8 @@ authors: [yannblazart]
 tags: [crac, startup, docker, java-modules, deep-dive]
 ---
 
+image::/images/posts/2026-11-04-banner.jpeg["Viduke, the Vidocq detective, photographs a running steam locomotive on the Paris rooftops at night, and the same locomotive bursts out of the photograph at full speed",role=blog-banner]
+
 Vidocq already does most of its work at build time: CDI wiring, JSON binding, REST routing and data access are
 generated as bytecode before the application ever starts. What is left at startup is the JVM itself: loading classes,
 running the boot, and warming up the JIT.
@@ -76,6 +78,8 @@ application that declares it, needs a JDK with CRaC. Our CI builds it in a dedic
 so the rest of the build stays on a standard JDK. An application without the extension sees none of this.
 
 == What lets go, and what comes back
+
+image::/images/posts/2026-11-04-crac-lets-go.jpeg["Before the flash, Viduke unplugs the last cables of an old switchboard and closes a ledger, while the camera and a quiet steam locomotive wait on the rooftop"]
 
 * **Chappe**, the HTTP server, stops its listeners before the checkpoint and binds them again after the restore.
 * **Mansart**'s connection pools close their connections, then reopen them after the restore. On the way back they
