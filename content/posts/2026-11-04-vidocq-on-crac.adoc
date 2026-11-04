@@ -1,0 +1,156 @@
+---
+title: "Checkpoint, Restore, Answer: Vidocq on CRaC"
+description: "Vidocq can now be snapshotted warm and restored in a fresh container with CRaC. Only one optional module knows about CRaC; every other brick implements a small neutral interface, with no reflection. Here is how it works, how to try it, and what a snapshot does not carry."
+date: 2026-11-04
+layout: post
+authors: [yannblazart]
+tags: [crac, startup, docker, java-modules, deep-dive]
+---
+
+Vidocq already does most of its work at build time: CDI wiring, JSON binding, REST routing and data access are
+generated as bytecode before the application ever starts. What is left at startup is the JVM itself: loading classes,
+running the boot, and warming up the JIT.
+
+https://openjdk.org/projects/crac/[CRaC] (Coordinated Restore at Checkpoint) takes care of that part. You start the
+application, let it warm up, and take a snapshot of the whole process. Later, in a fresh container, you restore the
+snapshot instead of starting from scratch, and the application answers with its classes loaded and its code already
+compiled.
+
+Vidocq now supports it. This post explains the design, how to try it, and what you need to know before putting a
+snapshot in production.
+
+== The one rule of a checkpoint
+
+A snapshot cannot carry what belongs to the operating system: a listening socket, a database connection, an open
+file. If any of these is still open when the checkpoint is requested, the JVM refuses to take it. So everything that
+holds such a resource has to let go of it before the checkpoint and take it back after the restore.
+
+In Vidocq, that means several bricks: Chappe holds the HTTP listeners, Mansart holds the connection pools and the
+transaction recovery journal, and Vauban's class loader holds the application jar open.
+
+== One module knows CRaC, the bricks do not
+
+The usual way to support CRaC is the `org.crac` library, a facade that finds the JDK's CRaC API at runtime by
+reflection, so that the same jar runs on any JDK. Vidocq avoids runtime reflection: we generate code at build time
+instead. So we took the other path and split the work in two.
+
+The bricks implement a neutral interface from the runtime's SPI, `Suspendable`. It knows nothing about CRaC:
+
+[source,java]
+----
+public interface Suspendable {
+
+    /** Releases what a snapshot cannot carry. Called before the snapshot, in reverse start order. */
+    void suspend();
+
+    /** Takes back what suspend() released. Called after the restore, in start order. */
+    void resume();
+}
+----
+
+The runtime hands the extensions that implement it to whoever asks, in start order, from the extension list it
+already builds with `ServiceLoader`. No reflection, no scanning.
+
+Then one optional module, `vidocq-runtime-crac-extension`, depends on the JDK's own `jdk.crac` module. It registers a
+single CRaC resource that drives the whole chain:
+
+[source,java]
+----
+SuspendableChain chain = new SuspendableChain(context.suspendables());
+this.resource = new Resource() {
+    @Override
+    public void beforeCheckpoint(Context<? extends Resource> ctx) {
+        chain.suspend();   // reverse start order, like a shutdown
+    }
+
+    @Override
+    public void afterRestore(Context<? extends Resource> ctx) {
+        chain.resume();    // start order, like a boot
+    }
+};
+Core.getGlobalContext().register(resource);
+----
+
+This split has a cost, and we chose to pay it: because the module requires `jdk.crac`, building it, and running an
+application that declares it, needs a JDK with CRaC. Our CI builds it in a dedicated Maven profile, on Azul Zulu CRaC,
+so the rest of the build stays on a standard JDK. An application without the extension sees none of this.
+
+== What lets go, and what comes back
+
+* **Chappe**, the HTTP server, stops its listeners before the checkpoint and binds them again after the restore.
+* **Mansart**'s connection pools close their connections, then reopen them after the restore. On the way back they
+read their configuration again, so a restored container can be pointed at another database through its environment.
+* **Mansart**'s transaction recovery journal closes its file and opens it again by its path.
+* **Vauban**'s class loader releases the application jar and reopens it on the next class it has to read.
+
+The last one was not on our list. The end-to-end test found it: the first checkpoint of an application started with
+an application layer failed, because the class loader still held the jar open. The fix belongs in Vauban, so it went
+there.
+
+== Trying it
+
+`vidocq create` knows the extension. Add it with the others:
+
+[source,shell]
+----
+vidocq create --name demo -x cassini-rest -x crac
+----
+
+Next to the project, you get a `Dockerfile.crac` that builds and runs the application on Azul Zulu CRaC, with the
+commands to use it in its header. Take a checkpoint of a running container:
+
+[source,shell]
+----
+docker build -f Dockerfile.crac -t demo-crac .
+docker run -d --init --name ckpt -v crac-img:/crac \
+  -e JAVA_OPTS="-XX:CRaCCheckpointTo=/crac -XX:+StartAttachListener" demo-crac
+# warm it up, then:
+docker exec ckpt jcmd io.vidocq.runtime.core.Vidocq JDK.checkpoint
+----
+
+Then restore it in a fresh container, from the same volume:
+
+[source,shell]
+----
+docker run --rm --init -p 8080:8080 -v crac-img:/crac \
+  -e JAVA_OPTS="-XX:CRaCRestoreFrom=/crac" demo-crac
+----
+
+Two details there come from experience. `--init` matters: a JVM running as process 1 does not accept the attach
+that `jcmd` needs. And behind `--init`, the process is named `exe`, which is why `jcmd` is given the main class
+rather than a process name.
+
+The rest of the tooling follows. `vidocq doctor` fails when the project has the `crac` extension but the JDK has no
+`jdk.crac` module, and warns on macOS or Windows, where you can build but not take a checkpoint. The jlink goal adds
+`jdk.crac` to the image by itself as soon as a module of the application requires it.
+
+== How we test it
+
+A script starts a packaged application on a CRaC JDK, creates data over HTTP, takes a checkpoint (the process exits
+once its image is written), restores it, then checks that the data is still there and that the restored process accepts new requests. It runs
+every night in our CI, on Azul Zulu CRaC.
+
+== What a snapshot does not carry, and what it carries too well
+
+* **Linux only.** Checkpoints are a Linux feature. You can develop on a Mac, but take the snapshot in a Linux
+container.
+* **A CRaC JDK.** We test with Azul Zulu CRaC 25 and its default engine, which needs no extra Linux capabilities in
+the container.
+* **Configuration after a restore.** Environment variables and system properties are those of the restore command,
+and Mansart's pools read theirs again. But values read once at startup from a configuration file stay as they were
+at checkpoint time, and so does the HTTP port.
+* **Telemetry.** MicroProfile Telemetry does not take part yet: Humboldt's exporters are the next brick to get the
+same treatment.
+* **Secrets.** A snapshot is a copy of the heap. Whatever was in memory at checkpoint time, a database password, a
+signing key, is in the image files. Store and ship them as you would store the secrets themselves.
+
+== Numbers
+
+This post has no startup figure on purpose. We are measuring restore time and time to first request against a regular
+start, on a real application and against other runtimes. The numbers will come in a follow-up post, with the method
+and the raw results.
+
+CRaC support lands on the `0.4.0-SNAPSHOT` line. As always, we would like to hear what you find when you try it.
+
+_Transparency: this article was written with the help of an AI, Claude, which also helped build the feature it
+describes._
