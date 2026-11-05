@@ -1,0 +1,168 @@
+---
+title: "Vidocq is fast. Very fast."
+description: "80,000 requests per second with a p99 under 9 ms, a start in under a second and 127 MB at rest: Vidocq's own numbers, measured on a 2018 Mac mini. No tuning, no native image, just Jakarta REST, CDI and JSON on a plain JVM."
+date: 2026-11-06
+layout: post
+authors: [yannblazart]
+tags: [performance, startup, memory, benchmark]
+---
+
+image::/images/posts/2026-11-06-banner.jpeg["Viduke, the Vidocq detective, sprints across the Paris rooftops at night with a pocket watch in his hand, leaving a trail of teal light and hexadecimal digits behind him",role=blog-banner]
+
+We have been measuring Vidocq for weeks, mostly to find what to fix next. This time we just want to show what it
+does. Here are Vidocq's own numbers, and nothing else: no ranking, no other framework, only what one small REST
+application on Vidocq does on one machine.
+
+And not a big machine. Everything below ran on a *Mac mini from 2018*, the one with the Intel Core i7-8700B, turned
+into a Linux bench box. Its turbo was off. The application got four of its six cores at most.
+
+On that box, Vidocq:
+
+* serves *80,000 requests per second* with a p99 latency of *8.8 ms*, and stays around *2 ms* up to 60,000;
+* *starts in 0.87 seconds*, from the container start to its first answer;
+* holds *127 MB* of memory at rest, and the whole application, Vidocq included, weighs *2.8 MB*.
+
+Vidocq is fast. Very fast. Let us show you.
+
+== The machine, and the application
+
+The machine is a 2018 Mac mini running Linux (kernel 5.15): an Intel Core i7-8700B at 3.2 GHz, 6 cores and 12
+hardware threads, 32 GB of memory. The CPU governor was set to `performance`, the turbo was off, and the CI runners
+that usually live on that box were stopped during the measurements. Every application runs in a fresh Docker
+container, pinned to its own cores.
+
+The JVM is Eclipse Temurin 25 with the G1 collector and a fixed 1 GB heap (`-Xms1g -Xmx1g`). That is all: no
+native image, no AOT cache, no CRaC, no tuning flag.
+
+The application is a small Todo API, written the way you would write it: a Jakarta REST resource, a CDI bean, JSON
+both ways, and 1,000 todos kept in memory.
+
+[source,java]
+----
+@Path("/todos")
+@ApplicationScoped
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+public class TodoResource {
+
+    @GET
+    public List<Todo> list() {
+        return store.values().stream().limit(LIST_SIZE).toList();
+    }
+
+    @GET
+    @Path("/{id}")
+    public Todo get(@PathParam("id") long id) { ... }
+
+    @POST
+    public Response create(Todo input) { ... }
+
+    @PUT
+    @Path("/{id}")
+    public Todo update(@PathParam("id") long id, Todo input) { ... }
+}
+----
+
+There is no trick in it. What makes it fast happens before it runs: Vidocq generates the CDI wiring, the JSON
+binding and the REST routing as bytecode at build time, so there is no reflection and no classpath scanning when it
+starts or when it serves a request.
+
+== 80,000 requests per second
+
+The load comes from https://github.com/giltene/wrk2[wrk2], on 2 cores of its own, with 100 connections. wrk2 sends
+requests at a *constant rate* and measures latency from the moment each request should have been sent, so a server
+that falls behind cannot hide it. Each rate runs in a fresh container, with 30 seconds of warm-up and then 30 seconds
+measured. The mix looks like a real Todo client: 65 % reads of one todo, 20 % creations, 10 % lists of 100 todos and
+5 % updates.
+
+Vidocq gets 4 physical cores (8 hardware threads). We call a rate *sustained* when at least 98 % of the requests asked
+are served and the p99 latency stays under 10 ms.
+
+image::/images/posts/2026-11-06-throughput.svg["Requests per second served by Vidocq at each rate asked, with the p99 latency of each: 4,990 at 5,000 asked (p99 1.9 ms), 9,902 at 10,000 (1.9 ms), 19,959 at 20,000 (2.2 ms), 39,918 at 40,000 (2.1 ms), 59,874 at 60,000 (2.6 ms) and 79,833 at 80,000 (8.8 ms)",title="Requests per second served, with the p99 latency of each rate"]
+
+[cols="1,1,1",options="header"]
+|===
+| Requests per second asked | Requests per second served | p99 latency
+
+| 5,000 | 4,990 | 1.93 ms
+| 10,000 | 9,902 | 1.91 ms
+| 20,000 | 19,959 | 2.18 ms
+| 40,000 | 39,918 | 2.08 ms
+| 60,000 | 59,874 | 2.56 ms
+| 80,000 | 79,833 | 8.81 ms
+|===
+
+Every rate is sustained. From 5,000 to 60,000 requests per second, 99 % of the answers come back in about 2 ms, and
+the curve is flat: Vidocq barely notices the load. At 80,000 requests per second, the highest rate we asked for, the
+p99 rises to 8.8 ms, still under the line. We did not ask for more, so the ceiling is somewhere above.
+
+image::/images/posts/2026-11-06-p99.svg["The p99 latency of Vidocq against the rate asked: about 2 ms from 5,000 to 60,000 requests per second, 8.8 ms at 80,000, under the 10 ms limit for a sustained rate",title="p99 latency against the rate: flat up to 60,000 requests per second"]
+
+Under the hood, things stay calm. At 40,000 requests per second, the server keeps about three of its eight hardware
+threads busy (301 % of one CPU). Over the whole life of that container, start-up and warm-up included, the garbage
+collector runs 27 times, and its longest pause is 6.8 ms. Each connection has its own virtual thread and your code
+stays plain, blocking Java: there is no thread pool to size and no reactive code to write.
+
+== Under a second to start
+
+image::/images/posts/2026-11-06-start.jpeg["Viduke bursts off a starting line painted on a Paris rooftop, next to a small aluminium computer, while a pocket watch floating above him has barely moved"]
+
+Start-up is measured from the moment the container starts to the first `200` answer of the application's health
+endpoint. Each figure is the median of 7 cold starts, each in a fresh container, with the application given 1, 2 or 4
+physical cores.
+
+image::/images/posts/2026-11-06-startup.svg["Vidocq start-up time by number of cores, median of 7 cold starts: 1.61 s on 1 core, 0.98 s on 2 cores, 0.87 s on 4 cores",title="Start-up, from the container start to the first answer"]
+
+On 4 cores, Vidocq is up in *0.87 seconds*, and it answers its first real request, the list of 100 todos, in 44 ms.
+On 2 cores it takes 0.98 seconds. Even on a single core, it is up in 1.61 seconds.
+
+That is the build-time work paying off again. When Vidocq starts, there is nothing to discover and nothing to
+generate: it loads about 1,900 classes, wires what was already wired, opens its socket and answers.
+
+== Travelling light
+
+image::/images/posts/2026-11-06-travel-light.jpeg["Viduke stands on a Paris rooftop at night and holds up a tiny open leather case, in which a whole miniature Paris glows, Eiffel Tower included"]
+
+The memory below is the resident memory of the whole process (RSS), on 4 cores. It is read 10 seconds after the
+application is ready, then again after 20 seconds of traffic at 1,000 requests per second.
+
+image::/images/posts/2026-11-06-memory.svg["Resident memory of the Vidocq process on 4 cores: 127 MB at rest, 10 seconds after start, and 283 MB after 20 seconds of traffic",title="Resident memory of the process, at rest and after traffic"]
+
+At rest, Vidocq holds *127 MB*, with 25 threads. After serving its first 20,000 requests, it holds 283 MB. Remember
+that the heap was set to a full 1 GB from the start: these figures are what the process actually touches, not a limit
+we squeezed it into.
+
+And the application itself, with all of Vidocq and every Jakarta API jar it runs on, is *2.8 MB* on disk, the JVM
+aside. You can send it as an email attachment.
+
+== And when a second is still too long
+
+If 0.87 seconds is still too slow for you, Vidocq now supports CRaC: you take a snapshot of a warm application once,
+and every new container restores it in about 400 ms, whatever the start-up took. The whole story is in
+link:/posts/checkpoint-restore-answer-vidocq-on-crac/[Checkpoint, Restore, Answer: Vidocq on CRaC].
+
+== Try it
+
+These are the numbers of the Vidocq 0.4.0-RC2 line. The
+https://doc.vidocq.dev/vidocq/getting-started[getting-started guide] takes you from `vidocq create` to your first
+answer in a few minutes. Write a resource, run it, point your favourite load generator at it, and tell us what you
+measure on your own machine. We would love to see your numbers.
+
+== How we measured
+
+* *What was measured.* The 0.4.0-SNAPSHOT of Vidocq's `main` branch, as deployed on 2026-10-28 for the start-up and
+memory figures, and on 2026-11-03 for the load figures; each jar is identified by its checksum. The 0.4.0-RC2 release
+is cut from that line, and the release build itself has not been measured yet.
+* *Two suites.* The start-up and memory figures come from a start-up suite that runs without JFR or GC logging, on
+Temurin 25.0.4.1. The load figures come from the load suite, on Temurin 25.0.5, which records JFR and GC logs during
+the runs; it reports a slower start and more memory at rest (1.20 s, 170 MB) for that reason, so we took the start-up
+and memory figures from the suite built for them.
+* *One machine, one run per rate.* Each rate of the load suite ran once, so differences of a few percent are noise.
+The start-up figures are medians of 7 cold starts.
+* *Where to check.* The method, the exact commands and the raw results are in the entries BENCH-20261103-01 (load)
+and BENCH-20261028-01 (start-up and memory) of
+https://codefloe.com/VidocqTools/vidocq-benchmarks/src/branch/main/BENCH.md[the benchmarks' `BENCH.md`], with the
+reports of the suites `bench-http-cdi-rest` and `bench-startup-footprint`. The charts of this post are drawn from the
+`results.json` of those two reports.
+
+_Transparency: this article was written with the help of an AI, Claude._

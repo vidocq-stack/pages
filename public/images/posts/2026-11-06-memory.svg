@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 220" width="600" height="220" role="img" aria-labelledby="t d">
+<title id="t">Resident memory of the Vidocq process on 4 cores</title>
+<desc id="d">at rest: 127 MB; after 20 s of traffic: 283 MB</desc>
+
+<style>
+  .bg { fill: #f8faff; }
+  .mark { fill: #1d4ed8; }
+  .line { stroke: #1d4ed8; fill: none; }
+  .dot { fill: #1d4ed8; stroke: #f8faff; }
+  .grid { stroke: #e2e8f0; }
+  .axis { stroke: #94a3b8; }
+  .limit { stroke: #b45309; }
+  .t1 { fill: #0f172a; }
+  .t2 { fill: #475569; }
+  .tl { fill: #b45309; }
+  text { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+  @media (prefers-color-scheme: dark) {
+    .bg { fill: #111827; }
+    .mark { fill: #4f8ff7; }
+    .line { stroke: #4f8ff7; }
+    .dot { fill: #4f8ff7; stroke: #111827; }
+    .grid { stroke: #1f2937; }
+    .axis { stroke: #4b5563; }
+    .limit { stroke: #fbbf24; }
+    .t1 { fill: #f3f4f6; }
+    .t2 { fill: #9ca3af; }
+    .tl { fill: #fbbf24; }
+  }
+</style>
+
+<rect class="bg" x="0" y="0" width="600" height="220" rx="10"/>
+<line class="grid" x1="196.0" x2="196.0" y1="28" y2="176" stroke-width="1"/>
+<text class="t2" x="196.0" y="198.0" font-size="16" font-weight="400" text-anchor="middle">0 MB</text>
+<line class="grid" x1="301.3" x2="301.3" y1="28" y2="176" stroke-width="1"/>
+<text class="t2" x="301.3" y="198.0" font-size="16" font-weight="400" text-anchor="middle">100 MB</text>
+<line class="grid" x1="406.7" x2="406.7" y1="28" y2="176" stroke-width="1"/>
+<text class="t2" x="406.7" y="198.0" font-size="16" font-weight="400" text-anchor="middle">200 MB</text>
+<line class="grid" x1="512.0" x2="512.0" y1="28" y2="176" stroke-width="1"/>
+<text class="t2" x="512.0" y="198.0" font-size="16" font-weight="400" text-anchor="middle">300 MB</text>
+<text class="t1" x="182.0" y="63.0" font-size="16" font-weight="400" text-anchor="end">at rest</text>
+<path class="mark" d="M196.0 36.0 H326.0 Q330.0 36.0 330.0 40.0 V76.0 Q330.0 80.0 326.0 80.0 H196.0 Z"/>
+<text class="t1" x="340.0" y="64.0" font-size="19" font-weight="600" text-anchor="start">127 MB</text>
+<text class="t1" x="182.0" y="135.0" font-size="16" font-weight="400" text-anchor="end">after 20 s of traffic</text>
+<path class="mark" d="M196.0 108.0 H490.1 Q494.1 108.0 494.1 112.0 V148.0 Q494.1 152.0 490.1 152.0 H196.0 Z"/>
+<text class="t1" x="504.1" y="136.0" font-size="19" font-weight="600" text-anchor="start">283 MB</text>
+<line class="axis" x1="196" x2="196" y1="28" y2="176" stroke-width="1"/>
+</svg>
