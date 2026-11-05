@@ -1,13 +1,13 @@
 ---
 title: "Checkpoint, Restore, Answer: Vidocq on CRaC"
-description: "Vidocq can now be snapshotted warm and restored in a fresh container with CRaC. Only one optional module knows about CRaC; every other brick implements a small neutral interface, with no reflection. Here is how it works, how to try it, what a snapshot does not carry, and the first numbers: a restore in about 400 ms, whatever the start-up took."
-date: 2026-11-04
+description: "Vidocq can now be snapshotted warm and restored in a fresh container with CRaC. Only one optional module knows about CRaC; every other brick implements a small neutral interface, with no reflection, and the application takes part through two CDI events. Here is how it works, how to try it, what a snapshot does not carry, and the first numbers: a restore in about 400 ms, whatever the start-up took."
+date: 2026-11-05
 layout: post
 authors: [yannblazart]
 tags: [crac, startup, docker, java-modules, deep-dive]
 ---
 
-image::/images/posts/2026-11-04-banner.jpeg["Viduke, the Vidocq detective, photographs a running steam locomotive on the Paris rooftops at night, and the same locomotive bursts out of the photograph at full speed",role=blog-banner]
+image::/images/posts/2026-11-05-banner.jpeg["Viduke, the Vidocq detective, photographs a running steam locomotive on the Paris rooftops at night, and the same locomotive bursts out of the photograph at full speed",role=blog-banner]
 
 Vidocq already does most of its work at build time: CDI wiring, JSON binding, REST routing and data access are
 generated as bytecode before the application ever starts. What is left at startup is the JVM itself: loading classes,
@@ -28,7 +28,8 @@ file. If any of these is still open when the checkpoint is requested, the JVM re
 holds such a resource has to let go of it before the checkpoint and take it back after the restore.
 
 In Vidocq, that means several bricks: Chappe holds the HTTP listeners, Mansart holds the connection pools and the
-transaction recovery journal, and Vauban's class loader holds the application jar open.
+transaction recovery journal, Humboldt holds the connections of its telemetry exporters, and Vauban's class loader
+holds the application jar open. And the application holds resources of its own.
 
 == One module knows CRaC, the bricks do not
 
@@ -79,7 +80,7 @@ so the rest of the build stays on a standard JDK. An application without the ext
 
 == What lets go, and what comes back
 
-image::/images/posts/2026-11-04-crac-lets-go.jpeg["Before the flash, Viduke unplugs the last cables of an old switchboard and closes a ledger, while the camera and a quiet steam locomotive wait on the rooftop"]
+image::/images/posts/2026-11-05-crac-lets-go.jpeg["Before the flash, Viduke unplugs the last cables of an old switchboard and closes a ledger, while the camera and a quiet steam locomotive wait on the rooftop"]
 
 * **Chappe**, the HTTP server, stops its listeners before the checkpoint and binds them again after the restore.
 * **Mansart**'s connection pools close their connections, then reopen them after the restore. On the way back they
@@ -92,6 +93,74 @@ exporters, and opens them again after the restore.
 The last one was not on our list. The end-to-end test found it: the first checkpoint of an application started with
 an application layer failed, because the class loader still held the jar open. The fix belongs in Vauban, so it went
 there.
+
+== Your own resources: two CDI events
+
+Vidocq knows only its own sockets, connections and files. A client the application opened itself (a JDK
+`HttpClient`, a gRPC channel, a JDBC connection outside the Mansart pool), a file it keeps open, data it should load
+before the snapshot: those belong to the application. It takes part through two CDI events of the runtime's SPI,
+`io.vidocq.runtime.spi.event.Checkpoint` and `Restore`, which it observes like any other event (Vidocq/vidocq#497).
+
+The two events have a fixed place in the chain. Before the checkpoint, the HTTP server stops first, so no request
+reaches the application while it lets go. Then the `Checkpoint` observers run, while the pool, the transactions and
+the telemetry are still open: they can still query the database. Those let go after them. After the restore, the
+order is reversed: the `Restore` observers run once the pool is back, and before the server takes requests again.
+
+The case that started it: an application needs a 50 MB reference file, which it downloads from another service.
+Loaded into memory before the checkpoint, it lands in the image, and no restored process downloads it again.
+
+[source,java]
+----
+@ApplicationScoped
+public class Catalogue {
+
+    private static final URI SOURCE = URI.create("https://reference.example.com/catalogue.csv");
+
+    private volatile HttpClient client = HttpClient.newHttpClient();
+    private volatile Map<String, Part> parts;
+    private volatile Instant loadedAt;
+
+    void beforeCheckpoint(@Observes @Priority(100) Checkpoint checkpoint) throws IOException, InterruptedException {
+        if (parts == null) {
+            load(); // <1>
+        }
+        client.close(); // <2>
+    }
+
+    void afterRestore(@Observes Restore restore) throws IOException, InterruptedException {
+        client = HttpClient.newHttpClient(); // <3>
+        if (loadedAt.isBefore(Instant.now().minus(Duration.ofHours(1)))) {
+            load(); // <4>
+        }
+    }
+
+    private void load() throws IOException, InterruptedException {
+        var response = client.send(HttpRequest.newBuilder(SOURCE).build(), BodyHandlers.ofInputStream());
+        try (InputStream body = response.body()) {
+            parts = Parts.read(body);
+        }
+        loadedAt = Instant.now();
+    }
+}
+----
+<1> Loaded into memory before the snapshot: the 50 MB land in the image.
+<2> An open connection makes the checkpoint fail. Close what the snapshot cannot hold.
+<3> Opened again after the restore.
+<4> The image can be days old: check that the data is still fresh enough.
+
+What to know about these observers:
+
+* **How old is the image?** `Restore.checkpointAt()` is the instant of the checkpoint the process comes from. With
+`Instant.now()`, it tells how long the image waited before this restore.
+* **Order.** Observers run in the order of their `@Priority`, the lowest first, one after the other, on the thread
+that takes the checkpoint.
+* **Failures.** An observer that throws makes the checkpoint fail. The JDK then runs the restore side all the same, so
+the `Restore` observers are called: write them so that they cope with a `Checkpoint` observer that did not finish.
+* **No `jdk.crac` in the application.** Its module reads `io.vidocq.runtime.spi`, not `jdk.crac`. On a JDK without
+CRaC, the events are simply never fired, and the same code runs unchanged.
+
+The https://doc.vidocq.dev/vidocq/dev/crac.html[Checkpoint and restore page] of the documentation has the rest: the
+order of every step, what an image keeps, and how to read a refused checkpoint.
 
 == Trying it
 
@@ -144,13 +213,13 @@ container.
 the container.
 * **Configuration after a restore.** Environment variables and system properties are those of the restore command,
 and Mansart's pools read theirs again. But values read once at startup from a configuration file stay as they were
-at checkpoint time, and so does the HTTP port.
+at checkpoint time, and so does the HTTP port: read again, in a `Restore` observer, what may differ.
 * **Secrets.** A snapshot is a copy of the heap. Whatever was in memory at checkpoint time, a database password, a
 signing key, is in the image files. Store and ship them as you would store the secrets themselves.
 
 == Numbers
 
-We measured a restore against a regular start, with the same application on three stacks: Vidocq `0.4.0-SNAPSHOT`, Spring Boot 4.1.2
+We measured a restore against a regular start, with the same application on three stacks: Vidocq, Spring Boot 4.1.2
 (Tomcat) and Quarkus 3.40.1 in its classic, JVM mode. The application, Nomenclature, reads a bill of materials of
 600,000 parts from a CSV file, indexes it, evaluates validation rules on every part, computes a checksum and makes
 20,000 warm-up calls before it reports ready. Its business code is shared, byte for byte, by the three applications,
@@ -161,8 +230,9 @@ For each stack, tier and number of cores, the harness started the application co
 once it was ready, and restored that checkpoint as many times. It ran on one machine (Intel Core i7-8700B, Linux),
 with Azul Zulu 25.0.4.1 CRaC and its default engine for every stack, the server pinned to 1 or 4 cores. Spring Boot
 and Quarkus use the `org.crac` library; Quarkus also needs `-Dquarkus.package.jar.crac.enabled=true`, without which it
-refuses the checkpoint. There were 7 runs of each mode for tiers s and m, and 3 for tier l, on 4 cores only. Medians,
-with the range of the runs:
+refuses the checkpoint. There were 7 runs of each mode for tiers s and m, and 3 for tier l, on 4 cores only. Vidocq
+was built from `main` at f7625f13, before the application events of Vidocq/vidocq#497, and has not been measured again
+since. Medians, with the range of the runs:
 
 [cols="1,1,1,1,1,1,1"]
 |===
@@ -208,7 +278,7 @@ The method, the commands, every run and these limits are in the entry BENCH-2026
 https://codefloe.com/VidocqTools/vidocq-benchmarks/src/branch/main/BENCH.md[the benchmarks' `BENCH.md`], next to the
 suite itself, `bench-crac`.
 
-CRaC support lands on the `0.4.0-SNAPSHOT` line. As always, we would like to hear what you find when you try it.
+CRaC support, with the application events, ships in Vidocq 0.4.0-RC2. As always, we would like to hear what you find when you try it.
 
 _Transparency: this article was written with the help of an AI, Claude, which also helped build the feature it
 describes._
