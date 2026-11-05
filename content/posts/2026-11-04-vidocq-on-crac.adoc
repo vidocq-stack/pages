@@ -1,6 +1,6 @@
 ---
 title: "Checkpoint, Restore, Answer: Vidocq on CRaC"
-description: "Vidocq can now be snapshotted warm and restored in a fresh container with CRaC. Only one optional module knows about CRaC; every other brick implements a small neutral interface, with no reflection. Here is how it works, how to try it, and what a snapshot does not carry."
+description: "Vidocq can now be snapshotted warm and restored in a fresh container with CRaC. Only one optional module knows about CRaC; every other brick implements a small neutral interface, with no reflection. Here is how it works, how to try it, what a snapshot does not carry, and the first numbers: a restore in about 400 ms, whatever the start-up took."
 date: 2026-11-04
 layout: post
 authors: [yannblazart]
@@ -85,6 +85,8 @@ image::/images/posts/2026-11-04-crac-lets-go.jpeg["Before the flash, Viduke unpl
 * **Mansart**'s connection pools close their connections, then reopen them after the restore. On the way back they
 read their configuration again, so a restored container can be pointed at another database through its environment.
 * **Mansart**'s transaction recovery journal closes its file and opens it again by its path.
+* **Humboldt**, MicroProfile Telemetry, waits for the export in progress, then closes the HTTP clients of its OTLP
+exporters, and opens them again after the restore.
 * **Vauban**'s class loader releases the application jar and reopens it on the next class it has to read.
 
 The last one was not on our list. The end-to-end test found it: the first checkpoint of an application started with
@@ -143,16 +145,67 @@ the container.
 * **Configuration after a restore.** Environment variables and system properties are those of the restore command,
 and Mansart's pools read theirs again. But values read once at startup from a configuration file stay as they were
 at checkpoint time, and so does the HTTP port.
-* **Telemetry.** MicroProfile Telemetry does not take part yet: Humboldt's exporters are the next brick to get the
-same treatment.
 * **Secrets.** A snapshot is a copy of the heap. Whatever was in memory at checkpoint time, a database password, a
 signing key, is in the image files. Store and ship them as you would store the secrets themselves.
 
 == Numbers
 
-This post has no startup figure on purpose. We are measuring restore time and time to first request against a regular
-start, on a real application and against other runtimes. The numbers will come in a follow-up post, with the method
-and the raw results.
+We measured a restore against a regular start, with the same application on three stacks: Vidocq `0.4.0-SNAPSHOT`, Spring Boot 4.1.2
+(Tomcat) and Quarkus 3.40.1 in its classic, JVM mode. The application, Nomenclature, reads a bill of materials of
+600,000 parts from a CSV file, indexes it, evaluates validation rules on every part, computes a checksum and makes
+20,000 warm-up calls before it reports ready. Its business code is shared, byte for byte, by the three applications,
+and they serve the same REST contract. The number of rules sets three start-up tiers: about 10 seconds (s), about one
+minute (m) and about eight minutes (l).
+
+For each stack, tier and number of cores, the harness started the application cold several times, took one checkpoint
+once it was ready, and restored that checkpoint as many times. It ran on one machine (Intel Core i7-8700B, Linux),
+with Azul Zulu 25.0.4.1 CRaC and its default engine for every stack, the server pinned to 1 or 4 cores. Spring Boot
+and Quarkus use the `org.crac` library; Quarkus also needs `-Dquarkus.package.jar.crac.enabled=true`, without which it
+refuses the checkpoint. There were 7 runs of each mode for tiers s and m, and 3 for tier l, on 4 cores only. Medians,
+with the range of the runs:
+
+[cols="1,1,1,1,1,1,1"]
+|===
+| Tier, cores | Vidocq cold | Vidocq restored | Spring Boot cold | Spring Boot restored | Quarkus cold | Quarkus restored
+
+| s, 1 | 10.8 s (10.7–10.9) | 402 ms (391–435) | 13.0 s (12.9–13.2) | 385 ms (368–408) | 9.5 s (9.4–9.6) | 373 ms (366–387)
+| s, 4 | 7.9 s (7.8–8.0) | 392 ms (390–410) | 8.4 s (8.3–8.7) | 354 ms (342–380) | 7.2 s (7.0–7.5) | 364 ms (344–375)
+| m, 1 | 58.0 s (57.5–58.8) | 406 ms (390–448) | 54.4 s (53.4–55.4) | 386 ms (378–397) | 51.7 s (51.0–53.7) | 384 ms (364–398)
+| m, 4 | 54.7 s (54.4–55.8) | 414 ms (388–548) | 48.0 s (46.5–50.0) | 359 ms (349–379) | 47.5 s (46.1–49.1) | 360 ms (342–380)
+| l, 4 | 467 s (411–476) | 359 ms (358–360) | 497 s (400–502) | 360 ms (349–365) | 520 s (416–521) | 353 ms (348–368)
+|===
+
+What the runs say:
+
+* **A restore takes about 400 ms, whatever the start-up took.** The medians go from 353 to 414 ms in every stack,
+tier and number of cores. The gain is therefore set by the application: a restore is 20 to 34 times faster than a
+10-second start, 132 to 143 times faster than a one-minute start, and 1,300 to 1,470 times faster than an
+eight-minute one. The restore times of the three stacks overlap: CRaC does not rank them.
+* **The state survives.** The 15 checkpoints all succeeded, and every cold start, checkpoint and restore of a tier
+reports the same checksum, in every stack.
+* **A restored process is small.** Five seconds after it is ready, a restored Vidocq holds 53 to 68 MB of resident
+memory, Quarkus 64 to 86 MB and Spring Boot 87 to 95 MB, against about 600 MB for the same process started cold: the
+garbage of the start-up work is not in the image. Vidocq's image is also the smallest, 301 to 315 MB (88 to 90 MB
+with `gzip -1`).
+* **The first request is served at once.** Restored on 4 cores, every stack answers its first request in 5 to 7 ms
+(median), and the slow first request of Quarkus cold, 173 to 183 ms, is gone.
+
+And what they do not say:
+
+* **The cold starts do not rank the frameworks.** Outside the shared business code, Vidocq and Quarkus start in about
+one second on 4 cores, Spring Boot in about 2.3 seconds. The rest is the shared code, and it ran 12 to 17 % slower
+under Vidocq at tier m. We have not found why yet.
+* **Tier l is noisy.** In each stack, one of the three cold starts was 55 to 105 seconds shorter than the two others.
+With three runs, the cold starts of tier l do not rank the stacks. Their restores did not vary.
+* **After a restore, Vidocq uses a little more CPU** than the two others until five seconds after ready (0.20 to
+0.29 s, against 0.15 to 0.25 s), for the same restore time. Not investigated yet.
+* **One machine, one warm cache.** The image was read from a local Docker volume, still in the page cache after the
+checkpoint, not from a cold disk or a remote store. The restore ran on the same JVM build, processor and host as the
+checkpoint, as CRaC requires. And the start-up work is synthetic, chosen to make long start-ups with the same code in
+every stack.
+
+The method, the commands, every run and these limits are in the entry BENCH-20261105-01 of
+https://codefloe.com/VidocqTools/vidocq-benchmarks[vidocq-benchmarks].
 
 CRaC support lands on the `0.4.0-SNAPSHOT` line. As always, we would like to hear what you find when you try it.
 
