@@ -453,7 +453,8 @@ And three rough edges we found while writing this post, with their workaround un
 [#try-it]
 == Try it
 
-0.4.0-RC2 is the latest release on Maven Central, so the installer picks it up:
+The CLI is a Java 25 application with a launcher for each shell, so it runs on macOS, Linux and Windows. 0.4.0-RC2 is
+the latest release on Maven Central, so the installer picks it up:
 
 [source,bash]
 ----
@@ -462,6 +463,13 @@ vidocq version        # Vidocq CLI 0.4.0-RC2
 vidocq create --name my-app -x cassini-rest
 cd my-app
 vidocq dev
+----
+
+On Windows, in PowerShell:
+
+[source,powershell]
+----
+irm https://vidocq.dev/install.ps1 | iex
 ----
 
 A CLI you already have says `vidocq update`. The
