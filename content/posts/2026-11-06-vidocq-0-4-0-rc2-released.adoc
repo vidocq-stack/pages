@@ -20,8 +20,8 @@ Three things to know about it:
 * *It restores from a snapshot.* With CRaC, a warmed-up Vidocq application comes back in a fresh container in about
   *400 ms*, whatever its start-up took.
 * *It is a joy to work with.* `vidocq dev` starts your database, reloads in about two seconds, runs your tests and
-  names the one that fails; `vidocq doctor` checks the project; `vidocq build docker` works on macOS and Windows. And
-  the `opens` lines are not your job any more: in the session below, you write none.
+  names the one that fails; `vidocq doctor` checks the project; `vidocq build docker` works on macOS, Linux and Windows.
+  And the `opens` lines are not your job any more: in the session below, you write none.
 
 The full list is in the https://doc.vidocq.dev/vidocq/0.4.0-RC2/whats-new[What's new of the runtime] and in the
 https://doc.vidocq.dev/home/whats-new[What's new of the ecosystem], which links each brick's own page.
@@ -361,8 +361,8 @@ Vidocq doctor — environment & project checks
 Since RC2 it checks the same `opens` the build checks, so it no longer says ✔ on a project the build then fails, and
 `vidocq doctor --fix` writes what it can.
 
-Last step, an image for production. A jlink image built on macOS holds macOS binaries, so the Dockerfile now links it
-again inside a Linux JDK:
+Last step, an image for production. On Linux, the jlink image goes into the container as it is. A jlink image built
+on macOS or Windows holds binaries for that system, so the Dockerfile now links it again inside a Linux JDK:
 
 [source,bash]
 ----
