@@ -1,0 +1,494 @@
+---
+title: "Vidocq 0.4.0-RC2 is available, and it's fast ;)"
+description: "The second release candidate of 0.4.0 is on Maven Central: 80,000 requests per second with a p99 under 9 ms, a start in under a second, 127 MB at rest, restores from a CRaC snapshot in about 400 ms, and a CLI that takes you from an empty directory to a Docker image without you writing a single opens line."
+date: 2026-11-06
+layout: post
+authors: [yannblazart]
+tags: [release, performance, startup, crac, cli, developer-experience]
+---
+
+image::/images/posts/2026-11-06-banner.jpeg["Viduke, the Vidocq detective, sprints across the Paris rooftops at night with a pocket watch in his hand, leaving a trail of teal light and hexadecimal digits behind him",role=blog-banner]
+
+Vidocq 0.4.0-RC2 is on Maven Central. Eleven days after RC1, the whole family went out again: *eighteen
+repositories* tagged `v0.4.0-RC2`, from `vidocq-parent` to the runtime and its CLI, with about 1,050 commits since
+`v0.4.0-RC1`. It is still a release candidate, and we want you to try it before `0.4.0`.
+
+Three things to know about it:
+
+* *It is fast.* On a 2018 Mac mini, one small REST application on Vidocq serves *80,000 requests per second* with a
+  p99 latency of *8.8 ms*, *starts in 0.87 seconds* and holds *127 MB* at rest. The whole application weighs *2.8 MB*.
+* *It restores from a snapshot.* With CRaC, a warmed-up Vidocq application comes back in a fresh container in about
+  *400 ms*, whatever its start-up took.
+* *It is a joy to work with.* `vidocq dev` starts your database, reloads in about two seconds, runs your tests and
+  names the one that fails; `vidocq doctor` checks the project; `vidocq build docker` works on macOS and Windows. And
+  the `opens` lines are not your job any more: in the session below, you write none.
+
+The full list is in the https://doc.vidocq.dev/vidocq/0.4.0-RC2/whats-new[What's new of the runtime] and in the
+https://doc.vidocq.dev/home/whats-new[What's new of the ecosystem], which links each brick's own page.
+
+[#fast]
+== It's fast
+
+The numbers below are Vidocq's own, and nothing else: no ranking, no other framework, only what one small REST
+application on Vidocq does on one machine. And not a big machine: a *Mac mini from 2018*, the one with the Intel Core
+i7-8700B, turned into a Linux bench box, turbo off. The application got four of its six cores at most.
+
+The JVM is Eclipse Temurin 25 with the G1 collector and a fixed 1 GB heap. That is all: no native image, no AOT
+cache, no CRaC, no tuning flag. The application is a Todo API written the way you would write it: a Jakarta REST
+resource, a CDI bean, JSON both ways, 1,000 todos kept in memory.
+
+=== 80,000 requests per second
+
+The load comes from https://github.com/giltene/wrk2[wrk2], on 2 cores of its own, with 100 connections. wrk2 sends
+requests at a *constant rate* and measures latency from the moment each request should have been sent, so a server
+that falls behind cannot hide it. The mix looks like a real Todo client: 65 % reads of one todo, 20 % creations,
+10 % lists of 100 todos and 5 % updates. Vidocq gets 4 physical cores (8 hardware threads), and we call a rate
+*sustained* when at least 98 % of the requests asked are served and the p99 latency stays under 10 ms.
+
+image::/images/posts/2026-11-06-throughput.svg["Requests per second served by Vidocq at each rate asked, with the p99 latency of each: 4,990 at 5,000 asked (p99 1.9 ms), 9,902 at 10,000 (1.9 ms), 19,959 at 20,000 (2.2 ms), 39,918 at 40,000 (2.1 ms), 59,874 at 60,000 (2.6 ms) and 79,833 at 80,000 (8.8 ms)",title="Requests per second served, with the p99 latency of each rate"]
+
+[cols="1,1,1",options="header"]
+|===
+| Requests per second asked | Requests per second served | p99 latency
+
+| 5,000 | 4,990 | 1.93 ms
+| 10,000 | 9,902 | 1.91 ms
+| 20,000 | 19,959 | 2.18 ms
+| 40,000 | 39,918 | 2.08 ms
+| 60,000 | 59,874 | 2.56 ms
+| 80,000 | 79,833 | 8.81 ms
+|===
+
+Every rate is sustained. From 5,000 to 60,000 requests per second, 99 % of the answers come back in about 2 ms, and
+the curve is flat: Vidocq barely notices the load. At 80,000 requests per second, the highest rate we asked for, the
+p99 rises to 8.8 ms, still under the line. We did not ask for more, so the ceiling is somewhere above.
+
+image::/images/posts/2026-11-06-p99.svg["The p99 latency of Vidocq against the rate asked: about 2 ms from 5,000 to 60,000 requests per second, 8.8 ms at 80,000, under the 10 ms limit for a sustained rate",title="p99 latency against the rate: flat up to 60,000 requests per second"]
+
+Under the hood, things stay calm. At 40,000 requests per second, the server keeps about three of its eight hardware
+threads busy. Over the whole life of that container, the garbage collector runs 27 times, and its longest pause is
+6.8 ms. Each connection has its own virtual thread and your code stays plain, blocking Java: there is no thread pool
+to size and no reactive code to write.
+
+=== Under a second to start
+
+image::/images/posts/2026-11-06-start.jpeg["Viduke bursts off a starting line painted on a Paris rooftop, next to a small aluminium computer, while a pocket watch floating above him has barely moved"]
+
+Start-up is measured from the moment the container starts to the first `200` answer of the health endpoint, as the
+median of 7 cold starts, each in a fresh container.
+
+image::/images/posts/2026-11-06-startup.svg["Vidocq start-up time by number of cores, median of 7 cold starts: 1.61 s on 1 core, 0.98 s on 2 cores, 0.87 s on 4 cores",title="Start-up, from the container start to the first answer"]
+
+On 4 cores, Vidocq is up in *0.87 seconds*, and it answers its first real request, the list of 100 todos, in 44 ms.
+Even on a single core, it is up in 1.61 seconds. When Vidocq starts there is nothing to discover and nothing to
+generate: it loads about 1,900 classes, wires what was already wired, opens its socket and answers.
+
+=== Travelling light
+
+image::/images/posts/2026-11-06-travel-light.jpeg["Viduke stands on a Paris rooftop at night and holds up a tiny open leather case, in which a whole miniature Paris glows, Eiffel Tower included"]
+
+The memory below is the resident memory of the whole process (RSS), on 4 cores, read 10 seconds after the
+application is ready, then again after 20 seconds of traffic at 1,000 requests per second.
+
+image::/images/posts/2026-11-06-memory.svg["Resident memory of the Vidocq process on 4 cores: 127 MB at rest, 10 seconds after start, and 283 MB after 20 seconds of traffic",title="Resident memory of the process, at rest and after traffic"]
+
+At rest, Vidocq holds *127 MB*, with 25 threads; after its first 20,000 requests, 283 MB. The heap was set to a full
+1 GB from the start: these figures are what the process actually touches, not a limit we squeezed it into. And the
+application itself, with all of Vidocq and every Jakarta API jar it runs on, is *2.8 MB* on disk, the JVM aside.
+
+[#less-reflection]
+== Why it's fast: even less reflection
+
+None of this comes from a trick in the application. It comes from what Vidocq does before the application runs: the
+CDI wiring, the JSON binding, the REST routing and the data access are generated as code at build time, so there is
+no reflection and no classpath scanning to pay for at start-up or per request. RC2 pushes that further:
+
+* *JSON-B without reflection for almost everything you exchange.* The types your resources take and return get their
+  binding generated at build time: records and final classes, but also plain classes with getters and setters and
+  their hierarchies (`Product extends BaseEntity`), date and number formats, arrays, adapters, serializers,
+  `@JsonbCreator`, polymorphism over a sealed interface, the entity of a `Response`, and the DTOs of a library.
+* *Jakarta Data without `opens`.* Mansart reaches your entities, your repository implementations and your projection
+  records through code its processor generates, including for `@Repository` interfaces shipped in a library.
+* *Expression Language, Config and the MicroProfile annotations at build time.* Peano generates the accessors of the
+  `@Named` beans your pages read, Ravel the factories of your `@ConfigProperties` classes and their converters;
+  Fault Tolerance, Metrics and OpenAPI read your annotations from companions written when your code compiles, and the
+  JWT extension runs at compile time too.
+* *Less work per request in CDI.* Request-scoped and dependent beans, private `@Inject` fields and interceptor
+  methods no longer go through reflection, and a bean is read once instead of at each creation.
+* *Your dependencies get their code too.* `vidocq:generate` now runs on every build: the jars your application
+  depends on get the beans, repositories and bindings their bricks generate for them, with nothing to declare.
+
+And when something still falls back to reflection, Vidocq says so: a class generated at run time is listed at boot,
+and a type that keeps the reflective JSON mapping is named in the build output, with the reason. The
+https://doc.vidocq.dev/vidocq/0.4.0-RC2/internals[internals page] lists every generator and what it produces.
+
+[#crac]
+== And when a second is still too long
+
+If 0.87 seconds is still too slow for you, RC2 supports CRaC. Take a snapshot of a warmed-up application once, and
+every new container restores it in about *400 ms*, whatever the start-up took: on an application that needs eight
+minutes to warm up, that is 1,300 times faster than a cold start. Your own code takes part through two CDI events,
+`Checkpoint` and `Restore`, to let go of a client or a file before the snapshot and take it back after, with no
+`jdk.crac` in its code. The whole story, numbers included, is in
+link:/posts/checkpoint-restore-answer-vidocq-on-crac/[Checkpoint, Restore, Answer: Vidocq on CRaC], and the how-to
+in the https://doc.vidocq.dev/vidocq/0.4.0-RC2/crac[documentation].
+
+[#developer-joy]
+== Developer joy: ten minutes with the RC2 CLI
+
+Fast is good. Pleasant is better. Most of RC2 is about the minutes you spend in front of your terminal, so here they
+are, played for real with the RC2 CLI on a Mac (Apple M5 Max, Docker through OrbStack). The outputs are copied from
+that session, with the log prefixes trimmed and a few lines cut (`…`).
+
+image::/images/posts/2026-11-06-cli.jpeg["Viduke sits on a Paris rooftop at night and types on a small laptop on his lap, while ribbons of teal light rise from the screen to a stack of three wooden crates tied with a red ribbon, floating among the stars"]
+
+=== An application with a database, in one command
+
+[source,bash]
+----
+curl -fsSL https://vidocq.dev/install.sh | sh
+vidocq create --name todo -g com.acme -x cassini-rest -x mansart-data -x flyway-migration
+----
+
+[source,text]
+----
+ℹ Scaffolding project 'todo'…
+✔ Added org.postgresql:postgresql  (the JDBC driver of the vidocq-runtime-devservice-postgres dev service)
+✔ Wired vidocq-runtime-devservice-postgres  (on vidocq-runtime-maven-plugin, in test scope with vidocq-runtime-devservices-junit)
+✔ Created src/main/resources/db/migration  (where flyway-migration reads its files; opened in module-info.java)
+✔ Project 'todo' created.
+----
+
+Jakarta Data needs a connection pool, so `mansart-data` brought `mansart-pool` along. The CLI also declared the
+PostgreSQL dev service, for `vidocq dev`, `vidocq test` and a plain `mvn test`, added the driver, and wrote the
+pool's settings into `vidocq.properties`, commented, for the day you run outside dev mode:
+
+[source,properties]
+----
+# mansart-pool: settings written by the Vidocq CLI, yours to edit
+# The PostgreSQL dev service sets vidocq.pool.url, .username and .password under vidocq dev, vidocq test and
+# mvn test. Everywhere else (vidocq run, the packaged application), the pool needs them: uncomment them, or
+# set them with `vidocq config set`, which uncomments the line in place.
+#vidocq.pool.url=jdbc:postgresql://localhost:5432/todo
+----
+
+=== `vidocq dev`: the database comes with it
+
+[source,bash]
+----
+cd todo
+vidocq dev
+----
+
+[source,text]
+----
+[INFO] Vidocq checkpom: 4 extension(s) and 3 codegen path(s) — all aligned.
+[INFO] Vidocq check-module-info: module-info of 'com.acme.todo' satisfies all 1 extension requirement(s) and opens the 0 package(s) the runtime reaches by reflection.
+[INFO] DevService 'postgres' starting…
+[INFO] Container postgres:16-alpine started in PT1.357817S
+…
+devservices   Dev services | 0 ms
+  1 service: postgres (postgres:16-alpine at localhost:32783) — vidocq:dev
+…
+rest          REST (Cassini) | 0 ms
+  1 resource class, 1 route, 1 provider at /
+  GET  http://localhost:8080/hello  HelloResource#hello
+devconsole    Dev console | 0 ms
+  http://127.0.0.1:8888/
+…
+Vidocq - Started in 372.412 ms (process running for 509 ms)
+----
+
+No database to install and no URL to copy: the dev service started a PostgreSQL container and handed its
+coordinates to the pool. The dev console is on port 8888, with a panel per extension.
+
+Now the code. A migration, an entity, a Jakarta Data repository and a resource, in a new package `todos`:
+
+[source,sql]
+----
+CREATE TABLE todos (
+    id    BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    done  BOOLEAN NOT NULL DEFAULT FALSE
+);
+----
+
+[source,java]
+----
+@Entity
+@Table(name = "todos")
+public class Todo {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+    private String title;
+    private boolean done;
+
+    // getters and setters
+}
+
+@Repository
+public interface Todos extends BasicRepository<Todo, Long> {
+
+    List<Todo> findByDone(boolean done);
+}
+
+@Path("/todos")
+@ApplicationScoped
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+public class TodoResource {
+
+    @Inject
+    Todos todos;
+
+    @GET
+    public List<Todo> list(@QueryParam("done") Boolean done) {
+        return done == null ? todos.findAll().toList() : todos.findByDone(done);
+    }
+
+    @POST
+    public Todo add(Todo todo) {
+        return todos.save(todo);
+    }
+}
+----
+
+Save, and `vidocq dev` does the rest:
+
+[source,text]
+----
+[INFO] Changes detected — recompiling...
+[INFO] Hot reload signalled after 1940 ms (in-JVM layer swap).
+Migrating schema "public" to version "1 - todos"
+Successfully applied 1 migration to schema "public", now at version v1 (execution time 00:00.004s)
+Mansart Data: 1 repository(ies) wired: [com.acme.todo.todos.Todos]
+…
+  mansart-data  1 entity, 1 repository, 1 method
+  rest        2 resource classes, 3 routes, 1 provider at /
+  anomalies   none
+Vidocq - Started in 100.206 ms (process running for 40342 ms)
+----
+
+[source,console]
+----
+$ curl -X POST localhost:8080/todos -H 'Content-Type: application/json' -d '{"title":"Try Vidocq 0.4.0-RC2"}'
+{"done":false,"id":1,"title":"Try Vidocq 0.4.0-RC2"}
+$ curl 'localhost:8080/todos?done=false'
+[{"done":false,"id":1,"title":"Try Vidocq 0.4.0-RC2"}]
+----
+
+Look at what did not happen: `module-info.java` did not change. The entity, the repository and the JSON both ways run
+on code generated at build time, so the new package has nothing to open. When a package does need an `opens` line,
+because a library reaches it by reflection, `vidocq dev` now writes the line itself, prints it and carries on, where
+it used to stop. And if you would rather never think about it, `vidocq create --open-module` makes the application an
+open module, and no tool will ever ask you for an `opens` line again.
+
+=== Tests that say what broke
+
+A first test, with `@VidocqTest`, which starts the application on the dev services:
+
+[source,java]
+----
+@VidocqTest
+class TodoResourceTest {
+
+    @Test
+    void createsATodo(VidocqApplication application) {
+        VidocqResponse created = application.post("/todos", "application/json", "{\"title\":\"Write a test\"}");
+
+        assertEquals(201, created.status(), "a new todo answers 201 Created");
+        assertTrue(application.get("/todos").body().contains("Write a test"));
+    }
+}
+----
+
+`vidocq test --once` runs every test once and exits with the verdict, for your CI and your scripts:
+
+[source,text]
+----
+[INFO] Vidocq test — running every test once
+[INFO] Tests: 1 passed, 1 failed, 0 skipped in 3.4 s (run-all)
+[INFO]   FAILED com.acme.todo.todos.TodoResourceTest#createsATodo(VidocqApplication) — AssertionFailedError: a new todo answers 201 Created ==> expected: <201> but was: <200>
+[INFO] Log: target/vidocq-dev-tests.log
+✘ Maven exited with code 1.
+----
+
+The failed test, and why, instead of a count. The resource answers `200`; make it answer `201 Created`:
+
+[source,java]
+----
+    @POST
+    public Response add(Todo todo) {
+        return Response.status(Response.Status.CREATED).entity(todos.save(todo)).build();
+    }
+----
+
+`vidocq dev` reloads and, with continuous testing, runs the tests again on its own:
+
+[source,text]
+----
+[INFO] Changes detected — recompiling...
+[INFO] Hot reload signalled after 2246 ms (in-JVM layer swap).
+Vidocq - Started in 74.706 ms (process running for 204687 ms)
+[INFO] Tests: 2 passed, 0 failed, 0 skipped in 3.4 s (change)
+----
+
+=== A doctor, and a Docker image from a Mac
+
+`vidocq doctor` reads the project and says what is wrong before the build does. On this one, nothing:
+
+[source,text]
+----
+Vidocq doctor — environment & project checks
+
+  ✔ Java version      Java 25
+  ✔ Maven wrapper     mvnw found
+  ✔ Vidocq project    pom.xml references the Vidocq runtime
+  ✔ Config            vidocq.properties — 1 key, all recognized
+  ✔ Extensions        5 extensions in the runtime dependencies
+  ✔ Codegen bundles   2 wired by vidocq-runtime-maven-plugin
+  ✔ Vauban indexer    wired by vidocq-runtime-maven-plugin
+  ✔ Dependency codegen vidocq:generate runs on every build (vidocq-runtime-parent)
+  ✔ Module directives module-info.java declares what the extensions need and opens the packages reached by reflection
+  ✔ Dev services      1 wired for vidocq dev, vidocq test and mvn test
+  …
+✔ No blocking issues found.
+  13 checks — 13 ok, 0 warning(s), 0 failed
+----
+
+Since RC2 it checks the same `opens` the build checks, so it no longer says ✔ on a project the build then fails, and
+`vidocq doctor --fix` writes what it can.
+
+Last step, an image for production. A jlink image built on macOS holds macOS binaries, so the Dockerfile now links it
+again inside a Linux JDK:
+
+[source,bash]
+----
+vidocq build docker
+----
+
+[source,text]
+----
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] jlink image ready: …/todo/target/dist
+[INFO] The runtime image was linked for macOS (Mach-O executable): the Dockerfile links it again inside eclipse-temurin:25-jdk (Linux).
+[INFO] Docker image built: todo:1.0.0-SNAPSHOT
+[INFO] Run with: docker run --rm -p 8080:8080 todo:1.0.0-SNAPSHOT
+✔ Docker image built.
+----
+
+The image is 101 MB, Flyway and the PostgreSQL driver included: jlink now gives the automatic modules of your
+dependencies a module descriptor on its own. Start it next to a PostgreSQL with `VIDOCQ_POOL_URL`,
+`VIDOCQ_POOL_USERNAME` and `VIDOCQ_POOL_PASSWORD` in its environment, and Flyway migrates the schema before the first
+request.
+
+=== And the rest of the toolbox
+
+* *`vidocq dev` survives a first build that does not compile*: it reports the error and builds again on your next
+  save, instead of exiting.
+* *Extensions write their settings.* `vidocq extension add humboldt-telemetry` names the service and points it at a
+  local collector; a Grafana dev service (`grafana/otel-lgtm`) shows the traces, and with the pool every SQL statement
+  is a span of the request. JWT gets commented hints, and the Keycloak dev service publishes its issuer, token URL and
+  admin console.
+* *`--help` on every command*, `JAVA_OPTS` honoured by the packaged launchers, and `@VidocqTest` requests that carry
+  headers, for a bearer token.
+* *`vidocq update`* keeps the CLI itself up to date, and tells you once a day at most when a newer one is out.
+
+[#bricks]
+== Brick by brick
+
+Beyond what is above, the highlights of each brick's _What's new_ page:
+
+https://doc.vidocq.dev/vauban/0.4.0-RC2/whats-new[Vauban] (CDI):: Interceptor methods and private `@Inject` fields
+without reflection; an interceptor may have an `@Inject` constructor.
+https://doc.vidocq.dev/champollion/0.4.0-RC2/whats-new[Champollion] (JSON-P, JSON-B):: CDI beans as adapters; when a
+module does not open a type, the error gives the `opens` line to add.
+https://doc.vidocq.dev/cassini/0.4.0-RC2/whats-new[Cassini] (REST):: Parameter annotations read once per method, not
+on every request; conformance fixes on multipart, `UriInfo`, `UriBuilder`, SSE and the client.
+https://doc.vidocq.dev/mansart/0.4.0-RC2/whats-new[Mansart] (Data, Transactions):: A missing table caught at build
+time from your Flyway migrations; a method no query derives from fails the build; runs unchanged on other CDI
+containers.
+https://doc.vidocq.dev/chappe/0.4.0-RC2/whats-new[Chappe] (HTTP):: Draining a request body already read no longer
+allocates, and a response body Cassini writes at once reaches Chappe without being copied.
+https://doc.vidocq.dev/peano/0.4.0-RC2/whats-new[Peano] (EL) and https://doc.vidocq.dev/ibarra/0.4.0-RC2/whats-new[Ibarra] (Pages)::
+A JSP reads `${cart.total}` from a `@Named` bean with no reflection; a page application lets go of its caches on
+reload.
+https://doc.vidocq.dev/humboldt/0.4.0-RC2/whats-new[Humboldt] (Telemetry):: OpenTelemetry 1.67.0, which fixes the
+link:/posts/the-advisory-we-were-watching-for-opentelemetry-s-tracestate-dos/[`tracestate` advisory]; `http.route` is
+the resource's template again.
+https://doc.vidocq.dev/heisenberg/0.4.0-RC2/whats-new[Heisenberg], https://doc.vidocq.dev/dirac/0.4.0-RC2/whats-new[Dirac], https://doc.vidocq.dev/ravel/0.4.0-RC2/whats-new[Ravel], https://doc.vidocq.dev/cyrano/0.4.0-RC2/whats-new[Cyrano], https://doc.vidocq.dev/grimm/0.4.0-RC2/whats-new[Grimm], https://doc.vidocq.dev/cervantes/0.4.0-RC2/whats-new[Cervantes], https://doc.vidocq.dev/knock/0.4.0-RC2/whats-new[Knock], https://doc.vidocq.dev/foy/0.4.0-RC2/whats-new[Foy]::
+Their annotations read at build time, a synchronous `@Timeout` on the caller's thread, faster REST client calls, an
+OpenAPI document without the runtime's own endpoints, and a JWT that stays out of the logs.
+
+[#upgrade]
+== Upgrading from RC1
+
+Bump the parent (or the BOM) to `0.4.0-RC2` and run `vidocq doctor`: it reads your project and says what to change,
+and `--fix` makes the changes it can. Under `vidocq-runtime-parent` that is usually all. A few things deserve a look:
+
+* *Four more codegen bundles.* Metrics, OpenAPI, Fault Tolerance and JWT now run their processor at build time.
+  The parent wires them for you; under your own parent, `vidocq:checkpom` fails the build and prints the `<path>` to
+  paste. See the https://doc.vidocq.dev/vidocq/0.4.0-RC2/migration[migration page].
+* *A repository method no query derives from fails the build*, instead of throwing at run time.
+  `-Amansart.unresolvedMethods=warn` keeps the old behaviour.
+* *Mansart Data brings its SQL dialects*: you can drop the one you declared.
+* *Behaviour you may notice*: a synchronous `@Timeout` method runs on the caller's thread; a typed REST client call
+  throws `WebApplicationException` on an error status; the OpenAPI document no longer lists `/health` and `/metrics`;
+  Telemetry exports over OTLP as soon as an endpoint is set.
+* *`vidocq:generate` runs on every build.* `-Dvidocq.generate.skip` turns it off.
+
+And three rough edges we found while writing this post, with their workaround until the fixes land:
+
+* Under `vidocq dev`, the first test run of a project whose test dependencies were never downloaded fails to resolve
+  them, because it runs Maven offline. Run `vidocq test --once` (or `./mvnw test`) once
+  (https://codefloe.com/Vidocq/vidocq/pulls/501[vidocq#501]).
+* The Mansart Data panel of the dev console shows its boot facts only when the application has no Jakarta
+  Transactions: `vidocq extension add mansart-transactions` gives it the query editor back.
+* Running `vidocq test` while `vidocq dev` runs rewrites `target/vidocq-dev-services.properties` with the test
+  session's database, which the next dev startup report then shows. The application keeps its own database;
+  restart `vidocq dev` to see its coordinates again.
+
+[#try-it]
+== Try it
+
+0.4.0-RC2 is the latest release on Maven Central, so the installer picks it up:
+
+[source,bash]
+----
+curl -fsSL https://vidocq.dev/install.sh | sh
+vidocq version        # Vidocq CLI 0.4.0-RC2
+vidocq create --name my-app -x cassini-rest
+cd my-app
+vidocq dev
+----
+
+A CLI you already have says `vidocq update`. The
+https://doc.vidocq.dev/vidocq/0.4.0-RC2/getting-started[getting-started guide] and the
+https://doc.vidocq.dev/tutorials/0.4.0-RC2/rest-and-database[REST and database tutorial] are on the 0.4.0-RC2 line of
+the documentation. Write a resource, run it, point your favourite load generator at it, and tell us what you measure
+on your own machine. If something does not work, tell us on https://codefloe.com/Vidocq/vidocq/issues[CodeFloe]: a
+release candidate is the moment when a report costs us the least.
+
+Next comes `0.4.0`: MicroProfile 7.2 on its final artifacts, and the security baseline of the
+https://codefloe.com/Vidocq/vidocq/src/branch/main/ROADMAP.md[roadmap].
+
+[#how-we-measured]
+== How we measured
+
+* *What was measured.* The 0.4.0-SNAPSHOT of Vidocq's `main` branch, as deployed on 2026-10-28 for the start-up and
+memory figures, and on 2026-11-03 for the load figures; each jar is identified by its checksum. The 0.4.0-RC2 release
+is cut from that line, and the release build itself has not been measured yet.
+* *Two suites.* Start-up and memory come from a suite without JFR or GC logging, on Temurin 25.0.4.1. Load comes from
+a suite on Temurin 25.0.5 that records JFR and GC logs, and reports a slower start and more memory at rest (1.20 s,
+170 MB) for that reason.
+* *One machine, one run per rate.* Each rate of the load suite ran once, so differences of a few percent are noise.
+The start-up figures are medians of 7 cold starts.
+* *CRaC.* The restore figures come from the
+link:/posts/checkpoint-restore-answer-vidocq-on-crac/[CRaC post]: same machine, Azul Zulu 25.0.4.1 CRaC, Vidocq
+built from `main` before the application events, medians of 3 to 7 runs per tier.
+* *The CLI session* ran once, on a Mac with an Apple M5 Max and Docker through OrbStack; its timings are what the
+tools printed that day, not a benchmark.
+
+_Transparency: this article was written with the help of an AI, Claude._
