@@ -1,0 +1,194 @@
+---
+title: "Vidocq 0.4.0-RC2 Is Out: CRaC, Less Reflection and a Build That Writes Your Module Directives"
+description: "The second release candidate of 0.4.0 puts the same eighteen families on Maven Central, adds the CRaC extension, generates at build time much of what ran by reflection, and makes the CLI and the Maven plugin write the Java Modules directives for you."
+date: 2026-11-06
+layout: post
+authors: [yannblazart, antoinesabotdurand]
+tags: [release, crac, codegen, developer-experience, java-modules]
+---
+
+Vidocq 0.4.0-RC2 is on Maven Central. As for RC1, the whole family went out together: *eighteen families*, tagged
+`v0.4.0-RC2`, from `vidocq-parent` to the runtime and its CLI, and every `main` is back on `0.4.0-SNAPSHOT`. More than a
+thousand commits landed in the seventeen repositories that carry code since `v0.4.0-RC1`. It is still a release
+candidate: we want you to try it before `0.4.0`.
+
+If you read the link:/posts/vidocq-0-4-0-rc1-is-out-servlet-6-1-pages-microprofile-7-2-and-a-better-development-loop/[RC1 post], this one is shorter on purpose. RC2 does
+not add a specification. It does one thing, in four places: *what ran by reflection at start-up is generated at build
+time, and the tools write what you used to have to know.* And it carries the extension we announced for this release.
+
+* *CRaC.* `vidocq-runtime-crac-extension` starts an application from a checkpoint of a warmed-up process.
+* *Less reflection.* JSON-B, Jakarta Data, Config, Expression Language, CDI interception and the Rest Client generate more
+  at build time, and say it when they cannot.
+* *The tools write your Java Modules directives.* `vidocq doctor`, `extension add` and `vidocq dev` write the `requires`
+  and the `opens`, or tell you why they cannot.
+* *A better loop.* `vidocq test --once`, failed tests named in dev mode, dev services wired for you, database spans.
+
+.In this post
+* <<crac,Checkpoint and restore (CRaC)>>
+* <<reflection,Generated at build time, not by reflection>>
+* <<modules,Java Modules: the tooling writes the directives>>
+* <<loop,A better development loop>>
+* <<bricks,Brick by brick>>
+* <<docs,Documentation>>
+* <<upgrade,Upgrading from RC1>>
+* <<next,What is next>>
+
+[#crac]
+== Checkpoint and restore (CRaC)
+
+CRaC, Coordinated Restore at Checkpoint, lets you start an application once, warm it up, write a snapshot of the process
+to disk, and start every next instance from that snapshot instead of from `main`. Vidocq now supports it through one
+extension:
+
+[source,bash]
+----
+vidocq extension add crac
+----
+
+The things to know, because they are the ones that decide whether CRaC fits your situation:
+
+* *It needs a JDK with CRaC* to build and run the extension, for example Azul Zulu CRaC 25, and a checkpoint is taken and
+  restored on *Linux only*.
+* *Only the extension requires `jdk.crac`.* The runtime and its SPI do not, and your own code does not need it either. An
+  application built without the extension runs on an ordinary JDK; keep the extension out of a build that targets another
+  JDK, for example behind a Maven profile.
+* *Your application lets go of its own resources by observing two CDI events*, `Checkpoint` and `Restore`, defined in
+  `vidocq-runtime-spi`: close a client or an open file before the checkpoint, take it back after the restore. They run
+  after the HTTP server stopped taking requests and while the pool is still open.
+* *The bricks that hold state do the same for you.* Humboldt exports what is queued and closes the OTLP connections before
+  a checkpoint.
+
+The whole story, the commands (`jcmd <pid> JDK.checkpoint`, `-XX:CRaCRestoreFrom`), the order in which Vidocq lets go of
+things, and what an image does not keep, is on the
+https://doc.vidocq.dev/vidocq/0.4.0-RC2/crac.html[CRaC page] of the documentation. We give no start-up figure here: a
+number goes into a post only with its entry in `BENCH.md`, and the CRaC measurements are not in this release.
+
+One practical note: building and publishing the extension needs the CRaC JDK on the
+build machine. Our release pipeline now has a dedicated runner for it, and the `vidocq` release builds with the `crac`
+profile next to `release`.
+
+[#reflection]
+== Generated at build time, not by reflection
+
+RC1 made the bricks provable outside Vauban. RC2 goes after the reflection that was left. The rule is the one of the
+whole ecosystem, *maximum static code generation*, and the result is that an application needs fewer `opens`, starts with
+less work, and tells you when it could not avoid a reflective path.
+
+* *JSON-B without reflection.* Champollion's processor now runs in the REST codegen bundle: the records, the final
+  classes and the plain classes a resource takes or returns get their JSON-B binding at build time, formats, arrays,
+  adapters, `@JsonbCreator` and sealed hierarchies included, and so do the DTOs of a dependency jar. A CDI bean can be
+  a JSON-B adapter or serializer, checked at build. The entity of a `Response` is bound at build time too, so a production
+  build no longer passes with an endpoint that fails on its first call.
+* *Jakarta Data without reflection.* Mansart reaches entities, repositories and the records a JDQL query projects into
+  through generated code, so they need no `opens`. A library's `@Repository` interfaces are implemented at build time
+  by `vidocq:generate`, which now runs on every build of an application. The catalogue of repositories read by
+  reflection is no longer built in production.
+* *Config.* `@ConfigProperties` classes and implicit converters get generated factories: Ravel fills and converts them
+  with plain code.
+* *Expression Language.* Peano generates the accessor tables of the `@Named` beans an expression reaches, so `${cart.total}`
+  works without `@ELAccessible`. A JSP also reads a `@Named` bean by name, as Jakarta EE requires (it did not, and that is
+  fixed).
+* *CDI.* Vauban validates bean classes from its index, reads generic types from the class files, and calls interceptor
+  methods through generated providers, so a package-private interceptor needs no `opens`. Request-scoped and dependent
+  beans no longer reflect per request.
+* *Fault Tolerance and the Rest Client.* Heisenberg reads its annotations at compile time and resolves a policy once;
+  Cyrano resolves providers and filter chains once per method and serves more interfaces at build time.
+
+When a brick must generate a class or serve a repository at run time anyway, it says so in a framed warning at start-up,
+and every component now has a section, _Generated code and reflective fallback_, with the same table: what is
+generated, by which tool and when, what uses it at run time, and what runs when generation is not possible.
+
+[#modules]
+== Java Modules: the tooling writes the directives
+
+Java Modules are the part of Vidocq that is strict on purpose, and the part where a newcomer meets the most
+friction. RC2 moves the burden to the tools.
+
+* *One check, written for you.* `vidocq doctor` and the build check the same module directives, the `opens` of your
+  application's packages included: the types a REST resource exchanges, the entities, the classes JSON-B or JPA reach
+  through fields, getters and superclasses. `--fix` writes the line.
+* *A clear message at run time.* A package the runtime cannot reach, and the build could not see, fails with the package
+  and the `opens` line to add. Under `vidocq dev` the line is written and the application reloads.
+* *Or no directive at all.* `vidocq create --open-module` creates an `open module`.
+* *One layout.* The packages opened for reflection go in one block, last, each line marked `// vidocq:<id>` so that
+  `extension remove` takes exactly those lines out.
+* *Extensions write their settings.* `extension add` and `create -x` append the settings an extension needs to
+  `vidocq.properties`, once, and `config set` uncomments a commented one. `mansart-pool` writes its connection;
+  `mansart-data` brings the pool; `flyway-migration` opens `db.migration` as soon as the project has a migration.
+
+[#loop]
+== A better development loop
+
+* *`vidocq test --once`* runs every test once and exits with the verdict, status 1 when one fails: the form for CI and
+  scripts.
+* *Failed tests are named* under `vidocq dev`: each one, the reason, and the line of the test where it failed. A first
+  build that does not compile no longer stops the loop: it reports the error and builds again on the next change.
+* *Dev services are declared for you.* `vidocq extension add`, `vidocq create` and `vidocq doctor --fix` write the
+  dev-service provider, the JDBC driver and the test-scope pair. `@VidocqTest` uses the dev services, sees the
+  runtime dependencies, and can send requests with headers. A dev service for an OpenTelemetry collector with
+  Grafana joins PostgreSQL and Keycloak.
+* *Database spans.* With Telemetry and the JDBC pool, each SQL statement is a span of the request's trace. The pool
+  has a hook on every connection, `JdbcConnectionDecorator`.
+* *Smaller things.* `--help` works on every command; `JAVA_OPTS` reaches the JVM in a packaged launcher; `vidocq build
+  docker` works from macOS and Windows by linking the runtime image inside a Linux JDK; `vidocq dev` frees the
+  configuration of a stopped layer, so a hot reload no longer keeps the previous application layer in memory.
+
+[#bricks]
+== Brick by brick
+
+* *Vauban* (101 commits): nested beans with observers compile, bean classes are validated from the index, generic types
+  are read from the class files, and request-scoped and dependent beans no longer reflect per request.
+* *Cassini* (128): beans found from the annotations of the deployment's index, generated adapters for `@BeanParam`
+  classes, sub-resources and `@Provider` classes, and a `@PreMatching` filter that runs once per request instead of twice.
+* *Champollion* (158): the JSON-B generation above, the `champollion-jsonb-cdi` module, and a discarded application layer
+  that stays collectable after a hot reload.
+* *Mansart* (79): the generation above, the naming rules for tables and columns documented, and a build-time warning for
+  an entity whose table the Flyway migrations never create.
+* *Heisenberg* (40): annotations read at compile time, policies resolved once, a synchronous `@Timeout` method that keeps
+  the caller's context, and correctness fixes on throwables and the circuit breaker.
+* *Humboldt* (50): OpenTelemetry 1.67.0, which fixes GHSA-ccrj-gw8r-854m; exporters default to OTLP when an endpoint is
+  set; `http.route` is the resource template again on Cassini; CRaC support.
+* *Grimm* (53): `@OpenAPIDefinition` read again on Vidocq, the runtime's own `/health` and `/metrics` out of the document,
+  and a document that starts with `openapi`, then `info`, in JSON and YAML alike.
+* *Cyrano* (52), *Cervantes* (22), *Dirac* (22), *Ravel* (21), *Chappe* (15), *Knock* (16), *Foy* (8), *Peano* (24) and
+  *Ibarra* (32): fixes and the generated-code sections above. Cervantes keeps the token out of `toString` and logs.
+
+Every bug we reproduce goes into the `BUG.md` of its repository, with a symptom, a minimal reproduction and a status;
+that is where the details of each fix are.
+
+[#docs]
+== Documentation
+
+The documentation of the 0.4.0-RC1 line is no longer published, and nothing was dropped: the _What's new_ page of each
+component on the 0.4.0-RC2 line is now cumulative. It has a section _Added in 0.4.0-RC2_ and, below it, a section _Brought
+by 0.4.0-RC1_ with every entry of the previous page. The
+https://doc.vidocq.dev/home/whats-new.html[ecosystem page] says what is new across the components, release candidate by
+release candidate. The 0.4.0-RC2 line is at https://doc.vidocq.dev/vidocq/0.4.0-RC2/getting-started.html[getting started].
+
+[#upgrade]
+== Upgrading from RC1
+
+Bump `vidocq-runtime-parent` (or `vidocq-runtime-bom`) to `0.4.0-RC2` and run `vidocq doctor`: it reads your project and
+says what to change, and `--fix` makes the changes it can. What to look at:
+
+* *Fault Tolerance, Metrics, OpenAPI and JWT now have a codegen bundle.* The application parent wires them for you; under
+  your own parent, add `vidocq-runtime-<extension>-extension-codegen` or declare the Vidocq plugin as a build extension.
+* *`vidocq:generate` runs on every build* through `vidocq-runtime-parent`. A pom that declares the execution again is
+  named by `vidocq:checkpom`; `-Dvidocq.generate.skip` turns it off.
+* *More packages are checked at build time.* A package JSON-B or JPA needs and the module does not open now fails the
+  build with the line to add, instead of failing the first request.
+* *The Telemetry extension no longer brings `opentelemetry-sdk-testing`* to a packaged application.
+
+[#next]
+== What is next
+
+`0.4.0` is planned for the end of November. Between now and then: the MicroProfile 7.2 finals once they are on Maven
+Central, with the TCKs run again on them, and the static analysis gates reviewed brick by brick. One thing is already on
+`main` and not in RC2: `vidocq update --release` and `vidocq update --snapshot` switch the CLI between the release and the
+SNAPSHOT channel, whatever it was installed from.
+
+Try it, and tell us on https://codefloe.com/Vidocq/vidocq/issues[CodeFloe] what does not work: a release candidate is
+when a report costs us the least.
+
+_Transparency: this post was drafted with the help of Claude, which also wrote part of the code it talks about. The
+decisions, the measurements we kept and the opinions are ours._
