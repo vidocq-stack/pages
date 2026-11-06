@@ -266,10 +266,6 @@ And what they do not say:
 checkpoint, not from a cold disk or a remote store. The restore ran on the same JVM build, processor and host as the
 checkpoint, as CRaC requires. And the start-up work is synthetic, chosen to make long start-ups.
 
-The method, the commands and every run are in the entry BENCH-20261105-01 of
-https://codefloe.com/VidocqTools/vidocq-benchmarks/src/branch/main/BENCH.md[the benchmarks' `BENCH.md`], next to the
-suite itself, `bench-crac`.
-
 CRaC support, with the application events, ships in Vidocq 0.4.0-RC2. As always, we would like to hear what you find when you try it.
 
 _Transparency: this article was written with the help of an AI, Claude, which also helped build the feature it
