@@ -3,7 +3,7 @@ title: "Vidocq 0.4.0-RC2 is available, and it's fast ;)"
 description: "The second release candidate of 0.4.0 is on Maven Central: 80,000 requests per second with a p99 under 9 ms, a start in under a second, 127 MB at rest, restores from a CRaC snapshot in about 400 ms, and a CLI that takes you from an empty directory to a Docker image without you writing a single opens line."
 date: 2026-11-06
 layout: post
-authors: [yannblazart]
+authors: [yannblazart, antoinesabotdurand]
 tags: [release, performance, startup, crac, cli, developer-experience]
 ---
 
