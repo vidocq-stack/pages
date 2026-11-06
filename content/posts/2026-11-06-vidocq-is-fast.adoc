@@ -159,10 +159,5 @@ the runs; it reports a slower start and more memory at rest (1.20 s, 170 MB) for
 and memory figures from the suite built for them.
 * *One machine, one run per rate.* Each rate of the load suite ran once, so differences of a few percent are noise.
 The start-up figures are medians of 7 cold starts.
-* *Where to check.* The method, the exact commands and the raw results are in the entries BENCH-20261103-01 (load)
-and BENCH-20261028-01 (start-up and memory) of
-https://codefloe.com/VidocqTools/vidocq-benchmarks/src/branch/main/BENCH.md[the benchmarks' `BENCH.md`], with the
-reports of the suites `bench-http-cdi-rest` and `bench-startup-footprint`. The charts of this post are drawn from the
-`results.json` of those two reports.
 
 _Transparency: this article was written with the help of an AI, Claude._
