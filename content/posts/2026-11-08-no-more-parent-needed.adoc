@@ -1,6 +1,6 @@
 ---
 title: "No More Parent Needed: a Vidocq Application Is a BOM, a Plugin and Its Dependencies"
-description: "From 0.4.0 a Vidocq application no longer has to inherit vidocq-runtime-parent: the Maven plugin, loaded as a build extension, gives the build everything the parent used to carry. Your company parent stays yours, the pom shrinks, and the CLI converts in both directions."
+description: "In the 0.4.0 line, 0.4.0-SNAPSHOT today, a Vidocq application no longer has to inherit vidocq-runtime-parent: the Maven plugin, loaded as a build extension, gives the build everything the parent used to carry. Your company parent stays yours, the pom shrinks, and the CLI converts in both directions."
 date: 2026-11-08
 layout: post
 authors: [yannblazart]
@@ -19,7 +19,8 @@ configuration, the executions, the plugin versions. It worked (we tried it on a 
 `vidocq:dev`, a 124 MB jlink image, all green), but every change of the parent left those sixty lines behind, and
 nothing told you.
 
-This post describes what lands on `main` this weekend (`0.4.0-SNAPSHOT`, Vidocq/vidocq#380) and ships in 0.4.0.
+This post describes what lands on `main` this weekend as `0.4.0-SNAPSHOT` (Vidocq/vidocq#380). Nothing of it is
+released yet: it will ship with 0.4.0.
 
 .In this post
 * <<pom,The whole pom>>
@@ -188,9 +189,9 @@ class path, where a named module cannot see them. IntelliJ, which runs javac, co
 [#cli]
 == The CLI: create, convert, check
 
-`vidocq create` writes a pom without a parent by default from now on. `--vidocq-version` picks the Vidocq version the
-project builds on, the CLI's own by default (`--parent-version`, its name until 0.4.0, still works); `--with-parent`
-writes the previous style, with `vidocq-runtime-parent`.
+`vidocq create` writes a pom without a parent by default from `0.4.0-SNAPSHOT` on. `--vidocq-version` picks the Vidocq
+version the project builds on, the CLI's own by default (`--parent-version`, its earlier name, still works);
+`--with-parent` writes the previous style, with `vidocq-runtime-parent`.
 
 A new command converts an existing project in either direction, for the application that gets a company parent, or
 the one that wants the parent back:
