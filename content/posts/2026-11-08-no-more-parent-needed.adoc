@@ -106,6 +106,9 @@ IDE, and the dependencies. Nothing else.
 </project>
 ----
 
+While 0.4.0 is a SNAPSHOT, `vidocq create` also writes the snapshot repositories, `maven.vidocq.dev/snapshots` and its
+backup, under `<repositories>` and `<pluginRepositories>`; they go away with the release.
+
 Add your `<parent>` above the `groupId` if you have one: the plugin merges with it. We checked with a parent that
 pins its own compiler and Surefire versions and adds `-parameters` to the compiler: its settings stay, ours are added
 next to them, the enforcer it binds runs. On the Vaadin application that started this work, the pom went from 211 lines
@@ -121,6 +124,7 @@ goal runs, the plugin looks at the effective model of every project that declare
 * the five executions of the plugin: `checkpom` at `validate`, `test-path` at `process-test-classes`, `generate` and
   `check-module-info` at `process-classes`, `package` at `package`, plus the build identity (below);
 * Java 25, unless the pom or a parent names a release, a source or a target;
+* the source encoding, UTF-8, unless the pom names one;
 * the compiler argument `-Avauban.providesHint=false`, next to the arguments you declared;
 * the versions of the lifecycle plugins (compiler 3.15.0, Surefire 3.5.5, jar, resources, clean, install, deploy) when
   Maven would have used its own defaults, which fail on Java 25 class files under Maven 4;
@@ -133,12 +137,15 @@ sets is kept. The second pass changes nothing: a project under `vidocq-runtime-p
 for byte, as before. The values are the parent's; a test in the Vidocq reactor fails when the two diverge, so the parent
 stays the single source of truth.
 
-`mvn help:effective-pom` shows the result, and one INFO line at the start of the build says what was added:
+`mvn help:effective-pom` shows the result, and one INFO line at the start of the build says what was added (one line,
+wrapped here; the pom above sets the release, so that property is not in it):
 
 ----
 [INFO] [vidocq] todo: no Vidocq parent in the pom, the plugin adds execution checkpom, execution test-path,
-       execution generate, execution check-module-info, execution package, version maven-surefire-plugin 3.5.5, ...,
-       property maven.compiler.release=25, compiler argument -Avauban.providesHint=false, ...
+       execution generate, execution check-module-info, execution package, execution build-info,
+       version maven-compiler-plugin 3.15.0, version maven-surefire-plugin 3.5.5, version maven-jar-plugin 3.4.2, ...,
+       property project.build.sourceEncoding=UTF-8, compiler argument -Avauban.providesHint=false,
+       surefire system property vidocq.test.runtimePath, property m2e.apt.activation=jdt_apt
 ----
 
 === The build identity, without a third-party plugin
@@ -146,9 +153,11 @@ stays the single source of truth.
 The parent wrote `META-INF/vidocq/build-info/<artifactId>.properties` with `git-commit-id-maven-plugin`: the commit, the
 branch, the dirty flag and the build time the startup banner and the dev console show. An application without the parent
 gets the same file from a goal of the Vidocq plugin, `vidocq:build-info`, bound by the plugin like the others. It reads
-`.git` itself (a plain repository, a worktree, a submodule, a shallow clone, packed refs) and falls back to the `git`
-command; where there is no repository at all, the build does not fail: the commit reads `unversionned`, and the build
-time is still written. A project that already runs `git-commit-id-maven-plugin`, or binds the goal itself, is left alone.
+`.git` itself for the commit and the branch (a plain repository, a linked worktree, a submodule, a shallow clone, packed
+refs) and asks the `git` command whether the tree is dirty; where there is no repository at all, the build does not
+fail: the commit reads `unversionned`, and the build time is still written. That time is the build's, to the second,
+unless the pom sets a real `project.build.outputTimestamp`: the 1980-02-01 default Maven 3.10 gives that property is
+not taken for one. A project that already runs `git-commit-id-maven-plugin`, or binds the goal itself, is left alone.
 
 [#ide]
 == What your IDE sees
@@ -178,8 +187,9 @@ class path, where a named module cannot see them. IntelliJ, which runs javac, co
 [#cli]
 == The CLI: create, convert, check
 
-`vidocq create` writes a pom without a parent by default from now on; `--with-parent` writes the previous style, with
-`vidocq-runtime-parent` (and `--parent-version` still chooses its version).
+`vidocq create` writes a pom without a parent by default from now on. `--vidocq-version` picks the Vidocq version the
+project builds on, the CLI's own by default (`--parent-version`, its name until 0.4.0, still works); `--with-parent`
+writes the previous style, with `vidocq-runtime-parent`.
 
 A new command converts an existing project in either direction, for the application that gets a company parent, or
 the one that wants the parent back:
@@ -193,7 +203,7 @@ vidocq pom convert --to parentless --check  # reports only; exit code 1 when a c
 
 It prints the diff before writing, is idempotent, keeps everything else as it is (dependencies, properties, your Vaadin
 configuration, comments, indentation), and writes nothing when it does not recognise the pom, with a message that says
-what it did not understand. The same edit is available to a build without the CLI as a goal of the plugin.
+what it did not understand.
 
 `vidocq:checkpom` learns one check for a project without the parent: the missing `maven.compiler.release`, for
 IntelliJ. The drift detection we first planned for the copied block has no block left to watch.
@@ -213,7 +223,7 @@ snapshots. With the CLI from the snapshots:
 
 [source,bash]
 ----
-vidocq create --name todo -g com.acme -x cassini-rest --parent-version 0.4.0-SNAPSHOT
+vidocq create --name todo -g com.acme -x cassini-rest --vidocq-version 0.4.0-SNAPSHOT
 cd todo
 mvn verify                 # tests, checkpom "all aligned", the first INFO line names what the plugin added
 mvn help:effective-pom     # the executions and versions, in the effective pom only
