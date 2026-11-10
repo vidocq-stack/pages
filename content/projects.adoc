@@ -83,9 +83,8 @@ Pure Java 25 HTTP/1.1 and HTTP/2 transport layer, with first-class **WebSocket**
 and **gRPC** transport (core framing over HTTP/2). HTTP/3 is on the roadmap, pending the JDK QUIC stack.
 Handles connections, request parsing, and response serialisation with no third-party I/O framework.
 
-Sustains **100k req/s with a p99 below 3 ms** on the project's reference harness — a deliberate
-ceiling of the pure one-virtual-thread-per-connection model, matching Jetty-level latency at a
-fraction of the idle memory footprint.
+It is built on the pure one-virtual-thread-per-connection model. Measured figures, with their
+hardware and exact commands, are recorded in link:https://codefloe.com/Vidocq/chappe/src/branch/main/BENCH.md[Chappe's BENCH.md].
 
 === `vauban` — CDI Container
 
