@@ -161,7 +161,7 @@ Any new runtime dependency requires an explicit justification in the pull reques
 
 Prefer the Class-File API (JEP 484) and annotation processors over runtime reflection.
 Metadata that can be produced at `compile` or `process-classes` time must not be computed at runtime.
-This keeps startup time flat and makes native compilation with GraalVM and Leyden CDS straightforward.
+This keeps startup time flat, lets the JDK's AOT cache hold the whole application, and prepares a GraalVM native image, which is not available yet.
 
 === Virtual threads for all I/O
 
