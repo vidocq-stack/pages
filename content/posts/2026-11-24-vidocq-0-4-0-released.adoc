@@ -12,16 +12,14 @@ image::/images/posts/2026-11-24-banner.jpeg["Viduke, the Vidocq detective, raise
 Vidocq 0.4.0 is on Maven Central. Two release candidates, eighteen days of your reports and ours, and the line is
 final: no `-RC` any more, the installer picks it up, and the documentation's default version is 0.4.0.
 
-It is also the first release cut from *one repository*. Up to RC2, eighteen repositories were tagged one after the
-other; since 20 November every component, the runtime and its CLI live in
-https://codefloe.com/Vidocq/vidocq[Vidocq/vidocq], built as one reactor, released under one version.
+It is also the first release cut from *one repository*: more on that <<monorepo,below>>.
 
 If you followed the release candidates, here is what 0.4.0 adds on top of them:
 
 * *Your data, seen from the inside.* Jakarta Persistence 3.2 runs on Vidocq, and `vidocq dev` gives it a panel that
   draws your model, runs your JPQL and shows the SQL it would create.
-* *The Web Profile fills in.* WebSockets, the Standard Tag Library and Jakarta Security join Servlet, Pages and
-  Expression Language.
+* *The Web Profile fills in, as a preview.* WebSockets, the Standard Tag Library and Jakarta Security join Servlet,
+  Pages and Expression Language.
 * *A dev loop that forgets nothing.* A change in a method body is swapped into the running JVM: the beans, the HTTP
   sessions and the open pages keep their state.
 * *Less to write, less to load.* A project no longer needs our parent pom, configuration profiles work, and the start
@@ -31,6 +29,29 @@ The complete list is in the https://doc.vidocq.dev/vidocq/0.4.0/whats-new[What's
 https://doc.vidocq.dev/home/whats-new[What's new of the ecosystem], which links each brick's own page. Each of those
 pages has three sections: what 0.4.0 added since RC2, what RC2 added, and what RC1 brought since 0.3.0. If you come
 from 0.3.0, read all three, starting with the link:/posts/vidocq-0-4-0-rc2-is-available-and-it-s-fast/[RC2 post].
+
+[#monorepo]
+== One repository, one version
+
+Up to RC2, Vidocq was twenty repositories: one per brick, one for the parent, one for the runtime. Releasing meant
+tagging eighteen of them in the right order, and a change to Vauban, our CDI container, meant a branch in Vauban, then
+a companion branch in every brick that used the changed API, each waiting for the snapshot of the one before.
+
+Since 20 November, every component of the release, the runtime, its Maven plugin and its CLI live in one repository,
+https://codefloe.com/Vidocq/vidocq[Vidocq/vidocq], built as one Maven reactor under one version. For you, it changes
+little: the artifacts keep their coordinates, and the BOM still aligns them. For us, and for anyone who contributes,
+it changes a lot:
+
+* *One pull request for one change.* A change to a shared API fixes every caller in the same pull request, and the
+  build of that pull request rebuilds and tests every module downstream of what changed.
+* *One version, one release.* 0.4.0 is one tag, `v0.4.0`, and every artifact of it was built from the same commit.
+* *The maturity of a component is where it lives.* `vidocq-components/` holds the stable bricks, `vidocq-preview/` the
+  usable ones that are not complete or not certified yet (Noether, Kerckhoffs), and `vidocq-incubator/` what is built
+  and tested but never released. Moving up a level is one commit.
+* *Third-party integrations live next door.* Extensions that depend on other libraries, such as the Vaadin and
+  LangChain4j ones, moved to their own organisation,
+  https://codefloe.com/VidocqCodeUniverse_VCU[VidocqCodeUniverse_VCU], where third-party dependencies are allowed and
+  the Vidocq repository keeps its zero-dependency rule.
 
 [#persistence]
 == Your data, seen from the inside
@@ -75,11 +96,14 @@ it all at once, `vidocq-runtime-noether-persistence-example` is a small reading 
 JTA unit, a REST resource.
 
 [#web-profile]
-== The Web Profile fills in
+== The Web Profile fills in, as a preview
 
 image::/images/posts/2026-11-24-web.jpeg["Viduke sends a beam of teal light from one Paris rooftop to another, where a small lit window answers him, hexadecimal digits floating along the beam"]
 
-Three Jakarta specifications join Servlet (Foy), Pages (Ibarra) and Expression Language (Peano):
+Vidocq's home ground is the Core Profile and MicroProfile. Its Jakarta EE Web Profile side is a *preview* in 0.4.0:
+usable, released, with official TCK runs behind each brick, but not complete and not certified. Try it, build on it,
+tell us what breaks; do not bet a production system on it yet. Three Jakarta specifications join Servlet (Foy), Pages
+(Ibarra) and Expression Language (Peano):
 
 https://doc.vidocq.dev/foy/0.4.0/whats-new[Jakarta WebSocket 2.2]::
 `vidocq-runtime-foy-websocket-extension` brings Foy's WebSocket server API to the application. A Vaadin application
@@ -175,7 +199,7 @@ They were measured on the 0.4.0 line just before RC2, and the link:/posts/vidocq
 how. We will measure 0.4.0 itself with the next round of our benchmark suites.
 
 [#production]
-== Ready for production, one step further
+== Shipping and running, one step further
 
 * *Two ways to ship a container.* `vidocq:docker` still builds a jlink image by default. With
   `-Dvidocq.docker.kind=jdk`, it copies the distribution onto an Eclipse Temurin JRE instead, so an encrypted jar or a
