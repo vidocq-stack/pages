@@ -24,6 +24,8 @@ If you followed the release candidates, here is what 0.4.0 adds on top of them:
   sessions and the open pages keep their state.
 * *Less to write, less to load.* A project no longer needs our parent pom, configuration profiles work, and the start
   replays a record of the build instead of doing the work again.
+* *Code written for a server feels at home.* The basics of JNDI, and a pool and transactions that hold under failure.
+* *And it runs well*: every rate up to 80,000 requests per second served, with a p99 around 2 ms for most of them.
 
 The complete list is in the https://doc.vidocq.dev/vidocq/0.4.0/whats-new[What's new of the runtime] and in the
 https://doc.vidocq.dev/home/whats-new[What's new of the ecosystem], which links each brick's own page. Each of those
@@ -194,10 +196,79 @@ We also chased the classes a start loads. The features added since late October 
 them lambdas spun on the start path. Rewriting those loops gave 270 of them back, and the memory at rest of our bench
 application went from 149 MB to 115 MB with them.
 
-If you missed the headline numbers of RC2, they still describe this line: one small REST application served
-80,000 requests per second with a p99 of 8.8 ms, started in 0.87 seconds and held 127 MB at rest, on a 2018 Mac mini.
-They were measured on the 0.4.0 line just before RC2, and the link:/posts/vidocq-0-4-0-rc2-is-available-and-it-s-fast/[RC2 post] says
-how. We will measure 0.4.0 itself with the next round of our benchmark suites.
+[#runs-well]
+== And it runs well
+
+On 18 November, a week before the release, we replayed our benchmark suites on the 0.4.0 line, on the same 2018 Mac
+mini as for RC2 (Intel i7-8700B, Linux, Temurin 25, the server pinned to four cores). The application is a small Todo
+API: Jakarta REST, JSON-B and CDI.
+
+image::/images/posts/2026-11-24-p99.svg["p99 latency of the Vidocq Todo API at each rate asked, median of 3 passes: 1.94 ms at 5,000 requests per second, 1.87 ms at 10,000, 2.17 ms at 20,000, 2.12 ms at 40,000, 2.53 ms at 60,000 and 5.02 ms at 80,000; every rate served in full"]
+
+* *Every rate is served, up to 80,000 requests per second*, with a p99 latency around 2 ms up to 60,000 and of
+  5.0 ms at 80,000, down from 8.8 ms at RC2.
+* *It starts in about one second* on four cores, and answers its first request 31 ms after that, 30 % sooner than
+  at RC2.
+* *It travels light*: a 3.5 MB application, 148 MB of memory at rest and 266 MB after the load.
+
+To be honest about it: start-up and memory at rest grew since RC2 (0.87 s and 127 MB then), with the features of this
+release and the classes they spun on the start path. The loops we rewrote <<less,above>> came after this run: they
+gave back 270 classes and 34 MB at rest on our developer machine, and the next replay will say what they give on this
+one.
+
+And next to the others? The same suite runs the best-known Java runtimes on the same machine, the same application and
+the same load, and we keep our comparison for a dedicated post with its full method. What we can say today: in the
+last full comparison, Vidocq was one of the two stacks of six that served every rate up to 80,000 requests per second
+with a p99 under 10 ms, the one that started the fastest, and the one that used the least memory at rest. It runs
+well, and we intend to keep it that way.
+
+[#jndi]
+== JNDI, the basics
+
+Code written for an application server looks its resources up by name, and so do some of our bricks. 0.4.0 gives
+Vidocq the basics of it, with `vidocq extension add naming`:
+
+* `new InitialContext().lookup("java:comp/env/jdbc/audit")` answers from the running CDI container, through Vauban
+  Naming. A name is declared in `vidocq.properties`, such as
+  `vidocq.naming.comp/env/jdbc/audit = javax.sql.DataSource @Named("audit")`, and can link to another `java:` name;
+  the names are checked at startup.
+* *The pools answer their names by default*: `java:comp/DefaultDataSource` is the default pool and
+  `java:comp/env/<name>` the pool named `<name>`, through the transactions when the transactions extension is there.
+* So code written for a server keeps working: a Mansart Data repository with
+  `@Repository(dataStore = "java:comp/env/jdbc/audit")`, a persistence unit created with
+  `Persistence.createEntityManagerFactory`, a `@PersistenceContext(name = …)` declared on a class, or the `sql:` tags
+  of the Standard Tag Library.
+
+It is a naming service for lookups inside the application, not a remote or federated one. The
+https://doc.vidocq.dev/vidocq/0.4.0/modules/vidocq-runtime-extensions#naming[extensions page] has the details.
+
+[#pool-and-transactions]
+== A pool and transactions that hold under failure
+
+Mansart's connection pool and its Jakarta Transactions manager got the kind of work that nobody sees until a database
+drops a connection at three in the morning.
+
+The pool::
+* idle connections are validated, and `minIdle` is held: a connection the database dropped no longer reaches the
+  next borrower;
+* what a borrower changed (isolation, read-only, catalog, schema, timeouts) is put back before the next one gets the
+  connection, and a connection is no longer rolled back twice on its way back;
+* a closed handle is dead: it throws instead of reaching a physical connection that another borrower may hold;
+* XA connections are pooled like the others, with `maxSize`, reuse and metrics.
+
+The transactions::
+* a two-phase commit reaches every resource, even when one of them fails, instead of leaving the others prepared
+  with their locks held;
+* the transaction timeout is applied, a rollback-only mark set in `beforeCompletion` rolls back, and an `Error` rolls
+  the transaction back instead of leaving it bound to the thread;
+* the caller of nested `@Transactional` methods sees its own exception, not an `IllegalStateException` from the
+  rollback;
+* transaction ids carry a node id, so a restart or a second instance on the same database no longer reuses the id of
+  a transaction in doubt, and the recovery journal is compacted;
+* a Mansart Data repository and a persistence unit on the same data source share one connection per transaction, so
+  each sees what the other wrote before the commit.
+
+The https://doc.vidocq.dev/mansart/0.4.0/whats-new[Mansart What's new] lists each fix with its ticket.
 
 [#production]
 == Shipping and running, one step further
@@ -207,10 +278,6 @@ how. We will measure 0.4.0 itself with the next round of our benchmark suites.
   library that is not a Java module works as it is. The new
   https://doc.vidocq.dev/vidocq/0.4.0/shipping[Choosing how to ship] page says which form fits which case.
 * *A jlink image is one plain modular application*, one copy of each module, by construction.
-* *Transactions you can trust under failure.* A two-phase commit reaches every resource even when one fails, the
-  transaction timeout is applied, an `Error` rolls back, transaction ids carry a node id, and the recovery journal is
-  compacted. The pool validates idle connections, keeps `minIdle`, pools XA connections and resets what a borrower
-  changed before the next one gets the connection.
 * *Safer answers.* An exception no `ExceptionMapper` handles answers a bare `500`: its message, which may carry SQL or
   request values, stays in the log. A JWT configuration that would fetch keys over cleartext HTTP from a remote host
   stops the start.
@@ -289,7 +356,13 @@ https://codefloe.com/Vidocq/vidocq/src/branch/main/vidocq-runtime/ROADMAP.md[roa
   depend on the load; the times did, so we do not quote them.
 * *Save detection.* Runtime `BENCH.md`, 2026-11-18: ten saves of a method body in a Cassini example under
   `vidocq dev`, the JDK's watcher against the 200 ms reading, on the same machine.
-* *RC2 figures.* Measured on the 0.4.0 line before RC2, as the RC2 post explains; 0.4.0 itself is not measured yet.
+* *Load, start-up and memory.* vidocq-benchmarks `BENCH-20261118-01`: the 0.4.0-SNAPSHOT deployed on 2026-11-18,
+  on a 2018 Mac mini (i7-8700B, turbo off, Linux), Temurin 25 with G1 and a 1 GB heap; start-up as the median of 7
+  cold starts, load with wrk2 at fixed rates, 30 s of warm-up and 30 s measured, median of 3 passes. The comparison
+  with the RC2 line is against `BENCH-20261028-01` and `BENCH-20261103-01`.
+* *The comparison with other stacks* is `BENCH-20261103-01`, six Java stacks on the same machine in one bench window,
+  the same Todo API and load for each; its full figures are in the
+  https://codefloe.com/Vidocq/vidocq-benchmarks[vidocq-benchmarks] repository.
 * Every figure has its entry, with the exact command and the raw results, in the `BENCH.md` of its component in
   https://codefloe.com/Vidocq/vidocq[Vidocq/vidocq].
 
