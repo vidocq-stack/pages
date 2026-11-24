@@ -51,7 +51,8 @@ it changes a lot:
 * *Third-party integrations live next door.* Extensions that depend on other libraries, such as the Vaadin and
   LangChain4j ones, moved to their own organisation,
   https://codefloe.com/VidocqCodeUniverse_VCU[VidocqCodeUniverse_VCU], where third-party dependencies are allowed and
-  the Vidocq repository keeps its zero-dependency rule.
+  the Vidocq repository keeps its zero-dependency rule. More extensions will follow them there. Their Maven
+  coordinates do not change: the same `groupId`, `artifactId` and version, so your pom keeps working as it is.
 
 [#persistence]
 == Your data, seen from the inside
