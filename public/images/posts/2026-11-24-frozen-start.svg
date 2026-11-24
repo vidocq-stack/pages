@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 340" width="600" height="340" role="img" aria-labelledby="t d">
+<title id="t">Start of a Vidocq application with ten build compatible extensions, run at start or frozen at build</title>
+<desc id="d">Time to the line Started, median of 15 starts: 430 ms with the extensions run at start, 391 ms frozen at build. CDI build phase of the startup report: 227 ms run at start, 172 ms frozen.</desc>
+
+<style>
+  .bg { fill: #f8faff; }
+  .mark { fill: #1d4ed8; }
+  .mark2 { fill: #94a3b8; }
+  .grid { stroke: #e2e8f0; }
+  .t1 { fill: #0f172a; }
+  .t2 { fill: #475569; }
+  text { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+  @media (prefers-color-scheme: dark) {
+    .bg { fill: #111827; }
+    .mark { fill: #4f8ff7; }
+    .mark2 { fill: #4b5563; }
+    .grid { stroke: #1f2937; }
+    .t1 { fill: #f3f4f6; }
+    .t2 { fill: #9ca3af; }
+  }
+</style>
+
+<rect class="bg" x="0" y="0" width="600" height="340" rx="10"/>
+<rect class="mark2" x="150" y="12" width="14" height="14" rx="3"/>
+<text class="t2" x="170" y="24" font-size="15">extensions run at start</text>
+<rect class="mark" x="350" y="12" width="14" height="14" rx="3"/>
+<text class="t2" x="370" y="24" font-size="15">frozen at build</text>
+
+<line class="grid" x1="66" x2="580" y1="274.0" y2="274.0" stroke-width="1"/>
+<text class="t2" x="56" y="279.0" font-size="15" text-anchor="end">0 ms</text>
+<line class="grid" x1="66" x2="580" y1="180.4" y2="180.4" stroke-width="1"/>
+<text class="t2" x="56" y="185.4" font-size="15" text-anchor="end">200</text>
+<line class="grid" x1="66" x2="580" y1="86.8" y2="86.8" stroke-width="1"/>
+<text class="t2" x="56" y="91.8" font-size="15" text-anchor="end">400</text>
+
+<rect class="mark2" x="125" y="72.8" width="70" height="201.2" rx="4"/>
+<text class="t1" x="160" y="64.8" font-size="18" font-weight="600" text-anchor="middle">430</text>
+<rect class="mark" x="205" y="91.0" width="70" height="183.0" rx="4"/>
+<text class="t1" x="240" y="83.0" font-size="18" font-weight="600" text-anchor="middle">391</text>
+<text class="t2" x="200" y="298" font-size="16" text-anchor="middle">launch to "Started"</text>
+
+<rect class="mark2" x="375" y="167.8" width="70" height="106.2" rx="4"/>
+<text class="t1" x="410" y="159.8" font-size="18" font-weight="600" text-anchor="middle">227</text>
+<rect class="mark" x="455" y="193.5" width="70" height="80.5" rx="4"/>
+<text class="t1" x="490" y="185.5" font-size="18" font-weight="600" text-anchor="middle">172</text>
+<text class="t2" x="450" y="298" font-size="16" text-anchor="middle">CDI build phase</text>
+
+<text class="t2" x="300" y="326" font-size="13" text-anchor="middle">Medians of 15 starts, ms. Vauban BENCH-20261113-01, Apple M5 Max, Temurin 25.</text>
+</svg>

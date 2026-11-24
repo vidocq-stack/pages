@@ -1,0 +1,271 @@
+---
+title: "Vidocq 0.4.0 is here: persistence, WebSockets, and a dev loop that keeps your state"
+description: "Vidocq 0.4.0 is on Maven Central: Jakarta Persistence with a dev console that draws your model, WebSockets, the Standard Tag Library and Jakarta Security on the Web Profile side, a dev mode that hot swaps without losing a session, a pom without a parent, and a start that does less work."
+date: 2026-11-24
+layout: post
+authors: [yannblazart]
+tags: [release, persistence, websocket, developer-experience, startup, cli]
+---
+
+image::/images/posts/2026-11-24-banner.jpeg["Viduke, the Vidocq detective, raises his top hat on a Paris rooftop at night while a trail of teal light and hexadecimal digits rises over the domes and the Eiffel Tower",role=blog-banner]
+
+Vidocq 0.4.0 is on Maven Central. Two release candidates, eighteen days of your reports and ours, and the line is
+final: no `-RC` any more, the installer picks it up, and the documentation's default version is 0.4.0.
+
+It is also the first release cut from *one repository*. Up to RC2, eighteen repositories were tagged one after the
+other; since 20 November every component, the runtime and its CLI live in
+https://codefloe.com/Vidocq/vidocq[Vidocq/vidocq], built as one reactor, released under one version.
+
+If you followed the release candidates, here is what 0.4.0 adds on top of them:
+
+* *Your data, seen from the inside.* Jakarta Persistence 3.2 runs on Vidocq, and `vidocq dev` gives it a panel that
+  draws your model, runs your JPQL and shows the SQL it would create.
+* *The Web Profile fills in.* WebSockets, the Standard Tag Library and Jakarta Security join Servlet, Pages and
+  Expression Language.
+* *A dev loop that forgets nothing.* A change in a method body is swapped into the running JVM: the beans, the HTTP
+  sessions and the open pages keep their state.
+* *Less to write, less to load.* A project no longer needs our parent pom, configuration profiles work, and the start
+  replays a record of the build instead of doing the work again.
+
+The complete list is in the https://doc.vidocq.dev/vidocq/0.4.0/whats-new[What's new of the runtime] and in the
+https://doc.vidocq.dev/home/whats-new[What's new of the ecosystem], which links each brick's own page. Each of those
+pages has three sections: what 0.4.0 added since RC2, what RC2 added, and what RC1 brought since 0.3.0. If you come
+from 0.3.0, read all three, starting with the link:/posts/vidocq-0-4-0-rc2-is-available-and-it-s-fast/[RC2 post].
+
+[#persistence]
+== Your data, seen from the inside
+
+image::/images/posts/2026-11-24-persistence.jpeg["Viduke studies a map of linked boxes pinned on a wall in an attic under the Paris roofs, a lantern in his hand, teal threads joining the boxes"]
+
+https://doc.vidocq.dev/noether/0.4.0/[Noether], our Jakarta Persistence 3.2 implementation, is now a Vidocq extension.
+One command wires it, with the Mansart pool and Mansart Transactions it runs on:
+
+[source,bash]
+----
+vidocq extension add noether-persistence
+----
+
+Your `persistence.xml` units run on the application's pools. `@PersistenceContext` and `@PersistenceUnit` are
+injected, and so is plain `@Inject`: every unit is an `EntityManagerFactory` bean named after it, a JTA unit also
+gives a transaction-scoped `EntityManager`, and its `CriteriaBuilder`, `Metamodel` or `SchemaManager` are one
+`@Inject` away, under the qualifier and the scope your `<qualifier>` and `<scope>` elements name, as the Jakarta EE 11
+platform asks. A JTA unit and a Mansart Data repository on the same pool share the connection of a transaction: each
+sees what the other wrote, before the commit.
+
+No `persistence.xml`? The `vidocq.persistence.<unit>.*` keys declare a unit with its module, packages or classes. A
+library module may carry its own `persistence.xml` next to its entities. And a component written for a Jakarta EE
+server finds its pools where it expects them: `java:comp/DefaultDataSource`, `java:comp/env/<name>`.
+
+Then start `vidocq dev` and open the dev console. The *Persistence* panel has a unit selector above six tabs:
+
+* the units, their entities and their pool;
+* a *graph of your model*, entities as boxes, relations as lines, a superclass above its subclasses;
+* a *JPQL editor* for queries and writes, rolled back unless you ask it to commit;
+* a paged view of an entity, whose selected rows open a ready-to-run `DELETE` or `UPDATE`;
+* the indexes you declared against the ones the database has;
+* the create and drop scripts, with a *Download* button.
+
+The injected `EntityManager` goes through a client proxy generated when the extension is built, not through a
+`java.lang.reflect.Proxy`: no reflection on the path of each call.
+
+Noether is a *preview*: the Persistence TCK passes its non-skipped tests on PostgreSQL with a local patch, and we
+claim no certification. The https://doc.vidocq.dev/noether/0.4.0/tck[TCK page] says exactly what runs, and the
+https://doc.vidocq.dev/noether/0.4.0/getting-started[getting-started page] takes you from an entity to a query. To see
+it all at once, `vidocq-runtime-noether-persistence-example` is a small reading notebook: three related entities, one
+JTA unit, a REST resource.
+
+[#web-profile]
+== The Web Profile fills in
+
+image::/images/posts/2026-11-24-web.jpeg["Viduke sends a beam of teal light from one Paris rooftop to another, where a small lit window answers him, hexadecimal digits floating along the beam"]
+
+Three Jakarta specifications join Servlet (Foy), Pages (Ibarra) and Expression Language (Peano):
+
+https://doc.vidocq.dev/foy/0.4.0/whats-new[Jakarta WebSocket 2.2]::
+`vidocq-runtime-foy-websocket-extension` brings Foy's WebSocket server API to the application. A Vaadin application
+gets real push over WebSocket through the
+https://codefloe.com/VidocqCodeUniverse_VCU/vidocq_vcu_extension_vaadin[Vaadin extension]. One key,
+`vidocq.websocket.allowed-origins`, lists the origins allowed to open a WebSocket besides your own, for Jakarta
+WebSocket endpoints and native Chappe mounts alike; a refused origin gets a `403` and a warning that names the key. At
+stop, every open WebSocket gets a proper `1001` Close.
+
+https://doc.vidocq.dev/bodoni/0.4.0/[Jakarta Standard Tag Library 3.0]::
+Bodoni gives the pages Ibarra compiles the `c:`, `fmt:`, `fn:`, `x:` and `sql:` tags. The official Tags TCK passes
+541 of 541 tests on Bodoni, Ibarra, Foy and Peano together (a TCK run, not a certification).
+`vidocq extension add bodoni-jstl` wires it.
+
+https://doc.vidocq.dev/kerckhoffs/0.4.0/[Jakarta Security 4.0]::
+Kerckhoffs, in preview, puts your authentication under Jakarta Security, on the Servlet extension: identity stores,
+the BASIC and FORM mechanisms, your own mechanism, `SecurityContext.authenticate` and `@RememberMe`. The official
+Security TCK on the assembled runtime passes its default set, 81 tests. `vidocq extension add kerckhoffs-security`.
+
+And a bean can now `@Inject` the `HttpServletRequest`, the `HttpSession` and the `ServletContext`, as on any Jakarta EE
+server. A Jakarta REST application can also run as a plain servlet, through the new `cassini-servlet` module.
+
+[#dev-loop]
+== A dev loop that forgets nothing
+
+image::/images/posts/2026-11-24-dev.jpeg["Viduke swaps a glowing gear in a large clock on a Paris rooftop at night while the clock keeps running, its hands still turning"]
+
+RC2 made `vidocq dev` fast. 0.4.0 makes it gentle with your state.
+
+*Hot swap.* When you change only method bodies, `vidocq dev` no longer restarts anything: the JVM redefines the
+changed classes in place, and your beans, your HTTP sessions and your open pages keep their state. The log says so:
+
+----
+Hot reload - redefined 2 classes in 14 ms, the application keeps running
+----
+
+*Sessions that survive a bigger change.* When a change does need a new application layer, the servlet deployment
+writes the HTTP sessions out at the stop and reads them back before it serves again: a Vaadin page keeps its UI, a
+shopping cart keeps its items. When a session cannot come back, because a serializable class lost a field for
+instance, `vidocq dev` drops it and says which class and why.
+
+*It tells you why it reloads.* After each recompile, `vidocq dev` compares what was compiled with what runs. An
+edited comment reloads nothing; any other change names its reason, such as
+`Hot reload - restarting on a fresh application layer: MainView gained a method lambda$new$1`.
+
+*A save seen sooner on macOS.* The JDK's file watcher on macOS looks every two seconds. `vidocq dev` now reads the
+file times itself, every 200 ms: from a save to its detection, the median went from 908 ms to 349 ms on our
+measurement. Linux keeps the JDK's watcher, which listens to the kernel there instead of polling.
+
+image::/images/posts/2026-11-24-save-seen.svg["From a save to its detection under vidocq dev on macOS, median of 10 saves: 908 ms with the JDK's file watcher, 349 ms with the file times read every 200 ms"]
+
+*Tests that point at the line.* A failed test now prints where it failed, `(OrderServiceTest.java:31)`; that was
+lost for tests running in a named module. A test run gets dev services of its own, so a test's `TRUNCATE` never
+empties the database you are clicking through. And a second `vidocq dev` on the same machine starts: its debug port
+moves aside, with a warning that says so.
+
+All of it is in the https://doc.vidocq.dev/vidocq/0.4.0/continuous-testing[continuous testing] and
+https://doc.vidocq.dev/vidocq/0.4.0/dev-console[dev console] pages.
+
+[#less]
+== Less to write, less to load
+
+*No parent pom required.* `vidocq create` now writes a pom that imports the BOM and declares the Vidocq plugin as a
+build extension. The plugin gives the build what our parent used to carry, so your company parent stays where it is.
+`--with-parent` still writes the former style, and two commands move an existing project:
+
+[source,bash]
+----
+vidocq pom convert --to parentless   # or --to parent; shows the diff first, --check for CI
+vidocq pom upgrade --release         # moves the pom to the latest Vidocq, either style
+----
+
+*Configuration that behaves like MicroProfile Config.* `%dev.vidocq.http.port=8081` now applies under `vidocq dev`, or
+wherever `vidocq.profile` names the profile, and `${DASHBOARD_PORT:8080}` is expanded in Vidocq's own keys, with or
+without Ravel. `vidocq doctor` reads the descriptions of the configuration keys your jars ship and warns about a value
+that does not fit.
+
+*A start that replays the build.* CDI build compatible extensions are a great way to compute at build time, but a
+container still ran them at every start. Vidocq now runs them once, in `vidocq:generate`, and freezes what they did;
+the start loads that record. On an application with ten such extensions (REST, Config, Health, Metrics, OpenAPI, JWT,
+REST Client, Fault Tolerance, Telemetry, Transactions), the median start went from 430 ms to 391 ms, and the CDI build
+phase from 227 ms to 172 ms. The startup report says `cdi extensions  10 extensions frozen at build`.
+
+image::/images/posts/2026-11-24-frozen-start.svg["Start of an application with ten build compatible extensions, median of 15 starts: 430 ms to Started when they run at start, 391 ms when frozen at build; CDI build phase 227 ms against 172 ms"]
+
+We also chased the classes a start loads. The features added since late October had cost a start about 400 classes, many of
+them lambdas spun on the start path. Rewriting those loops gave 270 of them back, and the memory at rest of our bench
+application went from 149 MB to 115 MB with them.
+
+If you missed the headline numbers of RC2, they still describe this line: one small REST application served
+80,000 requests per second with a p99 of 8.8 ms, started in 0.87 seconds and held 127 MB at rest, on a 2018 Mac mini.
+They were measured on the 0.4.0 line just before RC2, and the link:/posts/vidocq-0-4-0-rc2-is-available-and-it-s-fast/[RC2 post] says
+how. We will measure 0.4.0 itself with the next round of our benchmark suites.
+
+[#production]
+== Ready for production, one step further
+
+* *Two ways to ship a container.* `vidocq:docker` still builds a jlink image by default. With
+  `-Dvidocq.docker.kind=jdk`, it copies the distribution onto an Eclipse Temurin JRE instead, so an encrypted jar or a
+  library that is not a Java module works as it is. The new
+  https://doc.vidocq.dev/vidocq/0.4.0/shipping[Choosing how to ship] page says which form fits which case.
+* *A jlink image is one plain modular application*, one copy of each module, by construction.
+* *Transactions you can trust under failure.* A two-phase commit reaches every resource even when one fails, the
+  transaction timeout is applied, an `Error` rolls back, transaction ids carry a node id, and the recovery journal is
+  compacted. The pool validates idle connections, keeps `minIdle`, pools XA connections and resets what a borrower
+  changed before the next one gets the connection.
+* *Safer answers.* An exception no `ExceptionMapper` handles answers a bare `500`: its message, which may carry SQL or
+  request values, stays in the log. A JWT configuration that would fetch keys over cleartext HTTP from a remote host
+  stops the start.
+
+[#bricks]
+== Brick by brick
+
+Each brick has its own What's new page; here is one line for each.
+
+https://doc.vidocq.dev/cassini/0.4.0/whats-new[Cassini] (REST):: Filters, locators and `OPTIONS` now behave as the
+specification says in every corner we found, the client gets `rx()` and the TLS settings of `ClientBuilder`, and
+`cassini-servlet` runs an application as a servlet.
+https://doc.vidocq.dev/vauban/0.4.0/whats-new[Vauban] (CDI):: Extensions frozen at build, client proxies of
+synthetic beans generated at build, the full CDI language model for extensions, and about 280 fewer classes at start.
+https://doc.vidocq.dev/foy/0.4.0/whats-new[Foy] (Servlet):: WebSocket 2.2, `@Inject HttpServletRequest`, hooks for a
+Jakarta Authentication or Authorization runtime, sessions that survive a dev swap.
+https://doc.vidocq.dev/mansart/0.4.0/whats-new[Mansart] (Data, Transactions, Pool):: The transaction and pool fixes
+above; mapped names no longer quoted; a private repository is a compile error with the fix in its message.
+https://doc.vidocq.dev/champollion/0.4.0/whats-new[Champollion] (JSON-P, JSON-B):: Generic and qualified adapters as
+beans, a container-neutral CDI module, reproducible generated files.
+https://doc.vidocq.dev/chappe/0.4.0/whats-new[Chappe] (HTTP):: A WebSocket origin policy, bounded WebSocket writes and
+close handshake, and a handler's `Error` answered `500`.
+https://doc.vidocq.dev/dirac/0.4.0/whats-new[Dirac], https://doc.vidocq.dev/heisenberg/0.4.0/whats-new[Heisenberg], https://doc.vidocq.dev/ravel/0.4.0/whats-new[Ravel], https://doc.vidocq.dev/cervantes/0.4.0/whats-new[Cervantes], https://doc.vidocq.dev/grimm/0.4.0/whats-new[Grimm]:: Inherited metrics and gauges counted; Fault Tolerance definition errors as compile
+errors; configuration and JWT checks made at start from what the build collected; OpenAPI paths that carry the
+`@ApplicationPath`.
+
+[#upgrading]
+== Upgrading
+
+[source,bash]
+----
+vidocq update --release        # the CLI moves to 0.4.0, whatever channel you installed
+vidocq pom upgrade --release   # your pom moves to 0.4.0
+vidocq doctor                  # checks the project; --fix makes the changes it can
+----
+
+From RC2, three things deserve a look, each with its note on the
+https://doc.vidocq.dev/vidocq/0.4.0/migration[migration page]:
+
+* *The application layer holds your libraries by default* (`vidocq.app.layer=all`). An application that worked keeps
+  working: where `all` cannot apply, the build warns and falls back.
+* *Native WebSocket mounts refuse another origin* with a `403`. List the origins you trust in
+  `vidocq.websocket.allowed-origins`.
+* *Mansart Data no longer quotes table and column names*, as Jakarta Persistence does not: the database folds them.
+  A name that relied on its exact case needs its quotes in the mapping.
+
+[#try-it]
+== Try it
+
+[source,bash]
+----
+curl -fsSL https://vidocq.dev/install.sh | sh
+vidocq version        # Vidocq CLI 0.4.0
+vidocq create --name my-app --extension cassini-rest
+cd my-app
+vidocq dev
+----
+
+On Windows, in PowerShell: `irm https://vidocq.dev/install.ps1 | iex`.
+
+The https://doc.vidocq.dev/vidocq/0.4.0/getting-started[getting-started guide] and the two tutorials,
+https://doc.vidocq.dev/tutorials/0.4.0/your-first-app[your first application] and
+https://doc.vidocq.dev/tutorials/0.4.0/rest-and-database[REST and a database], are on the 0.4.0 line. Tell us what
+works and what does not on https://codefloe.com/Vidocq/vidocq/issues[CodeFloe]. What comes next is in the
+https://codefloe.com/Vidocq/vidocq/src/branch/main/vidocq-runtime/ROADMAP.md[roadmap].
+
+[#how-we-measured]
+== How we measured
+
+* *Frozen extensions.* Vauban `BENCH-20261113-01`: an application made with `vidocq create` and ten extensions,
+  packaged with and without the record, 15 cold starts per series and three rounds, on an Apple M5 Max with Temurin
+  25. The figures above are the quiet series, medians of the three rounds' medians; a second series on a busier
+  machine gave 500 to 561 ms against 463 to 480 ms.
+* *Classes at start.* Vauban `BENCH-20261118-01`: the Cassini application of our HTTP bench, 9 starts per
+  distribution, classes counted by the JVM's own counters, on the same machine under load. The class counts do not
+  depend on the load; the times did, so we do not quote them.
+* *Save detection.* Runtime `BENCH.md`, 2026-11-18: ten saves of a method body in a Cassini example under
+  `vidocq dev`, the JDK's watcher against the 200 ms reading, on the same machine.
+* *RC2 figures.* Measured on the 0.4.0 line before RC2, as the RC2 post explains; 0.4.0 itself is not measured yet.
+* Every figure has its entry, with the exact command and the raw results, in the `BENCH.md` of its component in
+  https://codefloe.com/Vidocq/vidocq[Vidocq/vidocq].
+
+_Transparency: this article was written with the help of an AI, Claude._

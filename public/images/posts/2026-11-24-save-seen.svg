@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 340" width="600" height="340" role="img" aria-labelledby="t d">
+<title id="t">vidocq dev on macOS: time from a save to its detection</title>
+<desc id="d">Median of 10 saves: 908 ms with the JDK's file watcher, 349 ms with the file times read every 200 ms.</desc>
+
+<style>
+  .bg { fill: #f8faff; }
+  .mark { fill: #1d4ed8; }
+  .mark2 { fill: #94a3b8; }
+  .grid { stroke: #e2e8f0; }
+  .t1 { fill: #0f172a; }
+  .t2 { fill: #475569; }
+  text { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+  @media (prefers-color-scheme: dark) {
+    .bg { fill: #111827; }
+    .mark { fill: #4f8ff7; }
+    .mark2 { fill: #4b5563; }
+    .grid { stroke: #1f2937; }
+    .t1 { fill: #f3f4f6; }
+    .t2 { fill: #9ca3af; }
+  }
+</style>
+
+<rect class="bg" x="0" y="0" width="600" height="340" rx="10"/>
+<line class="grid" x1="66" x2="580" y1="274.0" y2="274.0" stroke-width="1"/>
+<text class="t2" x="56" y="279.0" font-size="15" text-anchor="end">0 ms</text>
+<line class="grid" x1="66" x2="580" y1="157.0" y2="157.0" stroke-width="1"/>
+<text class="t2" x="56" y="162.0" font-size="15" text-anchor="end">500</text>
+<line class="grid" x1="66" x2="580" y1="40.0" y2="40.0" stroke-width="1"/>
+<text class="t2" x="56" y="45.0" font-size="15" text-anchor="end">1000</text>
+
+<rect class="mark2" x="140" y="61.5" width="120" height="212.5" rx="4"/>
+<text class="t1" x="200" y="53.5" font-size="18" font-weight="600" text-anchor="middle">908 ms</text>
+<text class="t2" x="200" y="298" font-size="16" text-anchor="middle">0.4.0-RC2: JDK watcher</text>
+
+<rect class="mark" x="370" y="192.3" width="120" height="81.7" rx="4"/>
+<text class="t1" x="430" y="184.3" font-size="18" font-weight="600" text-anchor="middle">349 ms</text>
+<text class="t2" x="430" y="298" font-size="16" text-anchor="middle">0.4.0: read every 200 ms</text>
+
+<text class="t2" x="300" y="326" font-size="13" text-anchor="middle">From a save to its detection, median of 10 saves. Runtime BENCH.md, 2026-11-18, Apple M5 Max.</text>
+</svg>
