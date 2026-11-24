@@ -1,80 +1,99 @@
 ---
 title: Projects
-description: All sixteen Vidocq sub-projects, their scope, and how they fit together.
+description: The Vidocq components, their scope, their TCK status and how they fit together.
 layout: page
 link: /projects/
 ---
 
 = Vidocq Projects
 
-Vidocq is a workspace of sixteen independent Maven projects.
-Each one implements exactly one Jakarta or MicroProfile specification — or one foundational concern — and
-publishes its own artifact to Maven Central on its own schedule.
+Vidocq is one repository, link:https://codefloe.com/Vidocq/vidocq[Vidocq/vidocq], released under one version.
+Each component implements one Jakarta or MicroProfile specification, or one foundational concern, and publishes its
+own artifacts to Maven Central: an application takes only the layers it needs, and a brick also runs on another CDI
+container or application server.
 
 The dependency graph is strictly layered: foundational bricks have no dependency on each other;
 Jakarta layers compose bricks; MicroProfile layers sit on top.
 
+Vidocq's home ground is the Core Profile and MicroProfile. Its Jakarta EE Web Profile side (Servlet, Pages,
+Expression Language, Tag Library, WebSocket, Security, Persistence) is a *preview* in 0.4.0: usable and released, with
+official TCK runs behind each brick, but not complete and not certified. Noether and Kerckhoffs sit in the
+repository's `preview/` folder.
+
 == TCK Status
 
-The table below summarizes the current official TCK position for each project.
-Projects with more than one official suite list each suite separately.
+The table below summarizes the latest official TCK run of each component, as its documentation records it. These are
+TCK runs, not certifications. Components with more than one official suite list each suite separately.
 
 [cols="2,4",options="header"]
 |===
-| Project | TCK status
+| Component | TCK status
 
 | `vauban`
 | CDI 4.1 Lite — 774/774 tests passed (100%).
 
 | `champollion`
-| JSON-P 2.1 — 179/179 tests passed (100%). JSON-B 3.0 — 290/295 tests passed (98.3%, 5 upstream skips).
-
-| `ravel`
-| MicroProfile Config 3.1 — 349/349 tests passed (100%).
-
-| `foy`
-| Jakarta Servlet 6.1 — 1,714 tests run, 921 passed (53.7% raw); the `api.*` family is at 95.6%.
+| JSON-P 2.1 — 179/179 tests passed (100%). JSON-B 3.0 — 290/295 tests passed (5 skipped upstream, 0 failures).
 
 | `cassini`
-| Jakarta REST 4.0 — 2,670 tests run, 2,535 applicable passed (100% of applicable tests).
+| Jakarta REST 4.0 — 2,539/2,539 tests passed (100%).
+
+| `foy`
+| Jakarta Servlet 6.1 — 1,707 of 1,714 tests passed, 7 skipped, 0 failures (99.6%).
+
+| `peano`
+| Jakarta Expression Language 6.0 — 361/361 tests passed (100%), signatures included.
+
+| `ibarra`
+| Jakarta Pages 4.0 — 682/682 tests passed (100%).
+
+| `bodoni`
+| Jakarta Standard Tag Library 3.0 — 541/541 tests passed (100%), on Ibarra, Foy and Peano together.
+
+| `mansart`
+| Jakarta Data 1.0 — 74/74 tests passed (100%). Jakarta Transactions 2.0 — smoke suite 5/5 passed (100%).
+
+| `noether` (preview)
+| Jakarta Persistence 3.2 — 2,131 of 2,135 tests passed, 0 failures, 4 official skips, on PostgreSQL 17; a local run
+with one fixture backported from upstream.
+
+| `kerckhoffs` (preview)
+| Jakarta Security 4.0 — a partial local run: 13 applications, 81 tests passed.
+
+| `ravel`
+| MicroProfile Config 3.1 — 378/378 tests passed (100%).
 
 | `heisenberg`
 | MicroProfile Fault Tolerance 4.1 — 463/463 tests passed (100%).
 
 | `cervantes`
-| MicroProfile JWT 2.1 — 206/206 tests passed (100%).
+| MicroProfile JWT 2.2 — 208/208 tests passed (100%).
 
 | `cyrano`
-| MicroProfile Rest Client 4.0 — 168/168 tests passed (100%).
+| MicroProfile Rest Client 4.0 — 235/235 tests passed (100%), SSL and SSE included.
 
 | `dirac`
 | MicroProfile Metrics 5.1.1 — 127/127 tests passed (100%).
 
 | `grimm`
-| MicroProfile OpenAPI 4.1 — 349/349 tests passed (100%).
+| MicroProfile OpenAPI 4.2 — 364/364 tests passed (100%).
 
 | `humboldt`
-| MicroProfile Telemetry 2.1 — 85/85 tests passed (100%).
+| MicroProfile Telemetry 2.2 — 85/85 tests passed (100%).
 
 | `knock`
 | MicroProfile Health 4.0 — 28/28 tests passed (100%).
 
-| `mansart`
-| Jakarta Data 1.0 — 74/74 tests passed (100%). Jakarta Transactions 2.0 — smoke suite 5/5 passed (100%).
-
-| `erasmus`
-| Jakarta Validation 3.1 — in development; official TCK run planned (M8).
-
 | `chappe`
-| Not applicable — transport project, not a spec implementation.
+| Not applicable — transport component, not a spec implementation.
 
-| `vidocq`
-| Not applicable — orchestrator project, not a spec implementation.
+| `vidocq-runtime`
+| Not applicable — orchestrator, not a spec implementation.
 |===
 
 == Foundational Bricks
 
-These four modules have zero inter-dependencies and carry no external runtime libraries.
+These four components have zero inter-dependencies and carry no external runtime libraries.
 They are the stable base everything else builds on.
 
 === `chappe` — HTTP Server
@@ -84,13 +103,15 @@ and **gRPC** transport (core framing over HTTP/2). HTTP/3 is on the roadmap, pen
 Handles connections, request parsing, and response serialisation with no third-party I/O framework.
 
 It is built on the pure one-virtual-thread-per-connection model. Measured figures, with their
-hardware and exact commands, are recorded in link:https://codefloe.com/Vidocq/chappe/src/branch/main/BENCH.md[Chappe's BENCH.md].
+hardware and exact commands, are recorded in
+link:https://codefloe.com/Vidocq/vidocq/src/branch/main/vidocq-components/vidocq-components-transport/chappe/BENCH.md[Chappe's BENCH.md].
 
 === `vauban` — CDI Container
 
-CDI 4.1 Lite container, fully JPMS-native.
+CDI 4.1 Lite container, Java Modules native.
 Uses the Class-File API and APT processors to generate bean metadata at compile time —
-no runtime scanning, no reflection.
+no runtime scanning, no reflection. Build compatible extensions run once, at build, and the start replays what they
+did. Vauban Naming answers JNDI `java:` lookups from the container.
 
 === `champollion` — JSON & Protobuf Processing
 
@@ -106,20 +127,38 @@ Sources: environment variables, system properties, and `META-INF/microprofile-co
 
 == Jakarta EE Layer
 
-=== `foy` — Jakarta Servlet 6.1
-
-[NOTE]
-====
-*Development in progress.* The Servlet layer is actively being built out and is not yet feature-complete.
-====
-
-Servlet container bridging `chappe` for transport and `vauban` for CDI integration.
-
 === `cassini` — Jakarta REST 4.0
 
-JAX-RS implementation.
+Jakarta REST implementation.
 Resource scanning and provider registration are handled at compile time via APT, keeping
-startup time flat regardless of application size.
+startup time flat regardless of application size. A REST application can also run as a plain servlet, through the
+`cassini-servlet` module.
+
+=== `foy` — Jakarta Servlet 6.1 and WebSocket 2.2 (preview)
+
+Servlet container bridging `chappe` for transport and `vauban` for CDI integration: filters, listeners, sessions,
+multipart, security constraints with BASIC and FORM login. It also brings the Jakarta WebSocket 2.2 server API.
+
+=== `peano` — Jakarta Expression Language 6.0 (preview)
+
+The engine behind `${...}` and `#{...}`, on the `jakarta.el` API alone. A page reads a `@Named` bean without
+reflection.
+
+=== `ibarra` — Jakarta Pages 4.0 (preview)
+
+JSP pages compiled at build time: `vidocq:generate` compiles them into the application module, so no work is left
+for the start, and a page that does not compile fails the build instead of the first request that asks for it. Runs
+on `foy` with `peano`.
+
+=== `bodoni` — Jakarta Standard Tag Library 3.0 (preview)
+
+The `c:`, `fmt:`, `fn:`, `x:` and `sql:` tags, as tag handlers on the Tag Library API alone; Ibarra can inline them at
+build time.
+
+=== `kerckhoffs` — Jakarta Security 4.0 (preview)
+
+Authentication under Jakarta Security on the Servlet extension: identity stores, the BASIC and FORM mechanisms, your
+own mechanism, `SecurityContext.authenticate` and `@RememberMe`. Not complete yet.
 
 == MicroProfile Layer
 
@@ -128,10 +167,10 @@ startup time flat regardless of application size.
 `@Retry`, `@CircuitBreaker`, `@Bulkhead`, `@Timeout`, and `@Fallback` over virtual threads.
 No thread-pool per policy; each interceptor submits to the shared virtual-thread executor.
 
-=== `cervantes` — JWT 2.1
+=== `cervantes` — JWT 2.2
 
-MicroProfile JWT: bearer token verification and `JsonWebToken` injection.
-Uses `champollion` for JSON parsing; no third-party JWT library.
+MicroProfile JWT: bearer token verification and `JsonWebToken` injection, signed and optionally encrypted tokens.
+Uses `champollion` for JSON parsing and `java.security` for the cryptography; no third-party JWT library.
 
 === `cyrano` — Rest Client 4.0
 
@@ -142,14 +181,14 @@ Built on `cassini` and `chappe`; no dynamic proxies at runtime.
 
 MicroProfile Metrics: counters, gauges, timers, and histograms exposed over a `/metrics` endpoint.
 
-=== `grimm` — OpenAPI 4.1
+=== `grimm` — OpenAPI 4.2
 
-MicroProfile OpenAPI: generates the OpenAPI document from JAX-RS resources during the build
+MicroProfile OpenAPI: generates the OpenAPI 3.1 document from Jakarta REST resources during the build
 via APT, then serves it statically at runtime.
 
-=== `humboldt` — Telemetry 2.1
+=== `humboldt` — Telemetry 2.2
 
-MicroProfile Telemetry: distributed tracing, metrics, and logs through the OpenTelemetry SDK.
+MicroProfile Telemetry: distributed tracing, metrics, and logs through OpenTelemetry.
 
 === `knock` — Health 4.0
 
@@ -159,30 +198,37 @@ MicroProfile Health: liveness and readiness probes at `/health/live` and `/healt
 
 === `mansart` — Jakarta Data 1.0 + Transactions 2.0 + JDBC
 
-Repository pattern and transaction management with a built-in JDBC connection pool.
-Two database dialects are supported out of the box: **H2** and **PostgreSQL**.
-Jakarta Persistence 3.2 support is planned for a future milestone.
+Repository pattern and transaction management with a built-in JDBC connection pool, XA connections included.
+Two database dialects are supported out of the box: **H2** and **PostgreSQL**. The pool validates idle connections
+and puts back what a borrower changed; a two-phase commit reaches every resource, even when one of them fails.
 
 The H2 integration also showcases Vidocq's JAR-enrichment capability: a dedicated **H2 extension**
-repackages the upstream H2 driver as a proper **JPMS module** — adding a `module-info` and clean
+repackages the upstream H2 driver as a proper **Java module** — adding a `module-info` and clean
 exports to a library that ships only as a classpath JAR — so it fits the strict module graph
 without `--add-opens` or automatic-module fallbacks.
 
-=== `erasmus` — Jakarta Validation 3.1
+=== `noether` — Jakarta Persistence 3.2 (preview)
 
-The newest brick, **in development and not released yet**: a Bean Validation engine with zero
-third-party dependency (only the spec jar — no Hibernate Validator, no external Expression
-Language). The bootstrap, the 21 built-in constraints, custom and composed constraints and
-message interpolation work today; cascading, value extractors, executable validation, APT
-code generation and the official TCK are the next milestones.
+Jakarta Persistence on Mansart's pools and transactions, as a Vidocq extension: `persistence.xml` units or
+`vidocq.persistence.*` keys, `@PersistenceContext` and `@Inject`, a connection shared with Mansart Data repositories
+within a transaction, and a dev console panel that draws your model and runs your JPQL.
 
 == Orchestrator
 
-=== `vidocq` — Vidocq-MPS
+=== `vidocq-runtime` — The Vidocq runtime
 
 Runtime orchestrator and extension SPI.
 Inspired by the Quarkus extension model: extensions declare their dependencies, contribute
-configuration, and wire the other bricks together at startup.
+configuration, and wire the other bricks together at startup. It also brings the Maven plugin, the `vidocq` CLI, the
+dev mode with its console, the BOM and the JNDI naming extension.
+
+== Outside this repository
+
+Two bricks are in development in repositories of their own, and are not released yet: `erasmus`, Jakarta Validation
+3.1 with zero third-party dependency (no Hibernate Validator, no external Expression Language), and `tassis`, Jakarta
+Messaging 3.1. Both will move into the repository's `incubator/` folder. Third-party extensions, such as the Vaadin
+extension, live in the link:https://codefloe.com/VidocqCodeUniverse_VCU[VidocqCodeUniverse_VCU] organisation, under
+the same Maven coordinates.
 
 == Dependency Graph
 
@@ -201,27 +247,31 @@ package "Foundation" {
 }
 
 package "Jakarta EE" {
-  [foy]     <<Servlet 6.1>>  #eff6ff
-  [cassini] <<REST 4.0>>     #eff6ff
+  [cassini]    <<REST 4.0>>              #eff6ff
+  [foy]        <<Servlet 6.1 · WebSocket 2.2>> #eff6ff
+  [peano]      <<EL 6.0>>                #eff6ff
+  [ibarra]     <<Pages 4.0>>             #eff6ff
+  [bodoni]     <<Tag Library 3.0>>       #eff6ff
+  [kerckhoffs] <<Security 4.0 · preview>> #eff6ff
 }
 
 package "MicroProfile" {
   [heisenberg] <<Fault Tolerance 4.1>> #f0f4ff
-  [cervantes]  <<JWT 2.1>>             #f0f4ff
+  [cervantes]  <<JWT 2.2>>             #f0f4ff
   [cyrano]     <<Rest Client 4.0>>     #f0f4ff
   [dirac]      <<Metrics 5.1>>         #f0f4ff
-  [grimm]      <<OpenAPI 4.1>>         #f0f4ff
-  [humboldt]   <<Telemetry 2.1>>       #f0f4ff
+  [grimm]      <<OpenAPI 4.2>>         #f0f4ff
+  [humboldt]   <<Telemetry 2.2>>       #f0f4ff
   [knock]      <<Health 4.0>>          #f0f4ff
 }
 
-package "Persistence & Validation" {
-  [mansart] <<Data 1.0 · Tx 2.0>> #fefce8
-  [erasmus] <<Validation 3.1 · in dev>> #fefce8
+package "Persistence" {
+  [mansart] <<Data 1.0 · Tx 2.0 · pool>> #fefce8
+  [noether] <<Persistence 3.2 · preview>> #fefce8
 }
 
 package "Orchestrator" {
-  [vidocq] <<Vidocq-MPS>> #fef9c3
+  [vidocq-runtime] <<runtime · extensions>> #fef9c3
 }
 
 [chappe]      --> [foy]
@@ -229,6 +279,10 @@ package "Orchestrator" {
 [chappe]      --> [cassini]
 [vauban]      --> [cassini]
 [champollion] --> [cassini]
+[foy]         --> [ibarra]
+[peano]       --> [ibarra]
+[ibarra]      --> [bodoni]
+[foy]         --> [kerckhoffs]
 [cassini]     --> [heisenberg]
 [cassini]     --> [cyrano]
 [cassini]     --> [grimm]
@@ -237,9 +291,13 @@ package "Orchestrator" {
 [vauban]      --> [dirac]
 [vauban]      --> [humboldt]
 [vauban]      --> [knock]
-[mansart]     --> [vidocq]
-[cassini]     --> [vidocq]
-[heisenberg]  --> [vidocq]
+[mansart]     --> [noether]
+[mansart]     --> [vidocq-runtime]
+[noether]     --> [vidocq-runtime]
+[cassini]     --> [vidocq-runtime]
+[heisenberg]  --> [vidocq-runtime]
+[bodoni]      --> [vidocq-runtime]
+[kerckhoffs]  --> [vidocq-runtime]
 @enduml
 ....
-.Dependency graph — arrows show compile-time dependencies
+.Dependency graph — arrows show what each component builds on or is assembled with
