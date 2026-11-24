@@ -18,8 +18,8 @@ If you followed the release candidates, here is what 0.4.0 adds on top of them:
 
 * *Your data, seen from the inside.* Jakarta Persistence 3.2 runs on Vidocq, and `vidocq dev` gives it a panel that
   draws your model, runs your JPQL and shows the SQL it would create.
-* *The Web Profile fills in, as a preview.* WebSockets, the Standard Tag Library and Jakarta Security join Servlet,
-  Pages and Expression Language.
+* *The Web Profile fills in, as a preview.* JSP pages compiled at build time, Expression Language, WebSockets, the
+  Standard Tag Library and Jakarta Security join Servlet.
 * *A dev loop that forgets nothing.* A change in a method body is swapped into the running JVM: the beans, the HTTP
   sessions and the open pages keep their state.
 * *Less to write, less to load.* A project no longer needs our parent pom, configuration profiles work, and the start
@@ -105,8 +105,17 @@ image::/images/posts/2026-11-24-web.jpeg["Viduke sends a beam of teal light from
 
 Vidocq's home ground is the Core Profile and MicroProfile. Its Jakarta EE Web Profile side is a *preview* in 0.4.0:
 usable, released, with official TCK runs behind each brick, but not complete and not certified. Try it, build on it,
-tell us what breaks; do not bet a production system on it yet. Three Jakarta specifications join Servlet (Foy), Pages
-(Ibarra) and Expression Language (Peano):
+tell us what breaks; do not bet a production system on it yet. Since 0.3.0, five Jakarta specifications join Servlet
+(Foy):
+
+https://doc.vidocq.dev/ibarra/0.4.0/[Jakarta Pages 4.0] and https://doc.vidocq.dev/peano/0.4.0/[Expression Language 6.0]::
+Your JSP pages run on Vidocq. `vidocq:generate` compiles them with Ibarra into the application module, so no work is
+left for the start, and a page that does not compile fails the build instead of the first request that asks for it.
+Peano evaluates the `${...}` and `#{...}` expressions, and a page reads `${cart.total}` from a `@Named` bean without
+reflection. The official TCKs pass 682 of 682 tests for Pages and 361 of 361 for Expression Language (TCK runs, not
+certifications). Both arrived with RC1, and the
+link:/posts/vidocq-0-4-0-rc1-is-out-servlet-6-1-pages-microprofile-7-2-and-a-better-development-loop/[RC1 post] tells
+their story.
 
 https://doc.vidocq.dev/foy/0.4.0/whats-new[Jakarta WebSocket 2.2]::
 `vidocq-runtime-foy-websocket-extension` brings Foy's WebSocket server API to the application. A Vaadin application
