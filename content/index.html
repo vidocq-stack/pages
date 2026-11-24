@@ -1,6 +1,6 @@
 ---
 title: Vidocq
-description: A modular MicroProfile runtime for Java 25 with AI-augmented development — JPMS-native, virtual-thread-first, zero external dependencies.
+description: A modular MicroProfile runtime for Java 25 with AI-augmented development — Java Modules native, virtual-thread-first, zero external dependencies.
 layout: home
 link: /
 name: Vidocq
@@ -19,7 +19,7 @@ theme-color: "#0f172a"
       <p class="vid-subtitle">
         A <strong>100% sovereign European stack</strong> — zero external dependencies,
         zero inherited CVEs, full technological independence.
-        Strict JPMS module isolation closes the door on reflection attacks and classpath pollution,
+        Strict Java Modules isolation closes the door on reflection attacks and classpath pollution,
         making Vidocq the first Java framework that is <strong>jlink-</strong> and <strong>jpackage-ready</strong> out of the box.
       </p>
       <div class="vid-actions">
@@ -40,17 +40,65 @@ theme-color: "#0f172a"
   </div>
 </div>
 
-<!-- ── Five constraints ──────────────────────────────────────── -->
+<!-- ── New in 0.4.0 ──────────────────────────────────────────── -->
+<div class="vid-alt-band">
+<section class="roq-section vid-section">
+  <h2>New in 0.4.0</h2>
+  <p class="roq-section-lead">
+    Released on 24 November 2026: persistence you can see, a dev loop that keeps your state,
+    and a runtime that runs well.
+  </p>
+  <div class="roq-features vid-features">
+    <div class="card card-highlighted roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-database"></i></div>
+      <h3>Persistence</h3>
+      <p>Jakarta Persistence 3.2 with Noether, in preview, as a Vidocq extension, with a dev console panel: a graph of your model, a JPQL editor, your data and your schema. A connection pool and transactions that hold under failure.</p>
+    </div>
+    <div class="card roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-arrows-rotate"></i></div>
+      <h3>A dev loop that forgets nothing</h3>
+      <p>Change a method body and <code>vidocq dev</code> redefines the class in place: your beans, HTTP sessions and open pages keep their state.</p>
+    </div>
+    <div class="card card-highlighted roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-globe"></i></div>
+      <h3>The Web Profile, as a preview</h3>
+      <p>WebSocket 2.2, Standard Tag Library 3.0 and Security 4.0 join Servlet, Pages and Expression Language, each with its official TCK run.</p>
+    </div>
+    <div class="card roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-book"></i></div>
+      <h3>JNDI, the basics</h3>
+      <p><code>java:comp/env</code> lookups answer from the CDI container, and the pools answer their names by default: code written for an application server keeps working.</p>
+    </div>
+    <div class="card card-highlighted roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-gauge-high"></i></div>
+      <h3>It runs well</h3>
+      <p>A REST application serves 80,000 requests per second with a p99 around 2 ms for most rates, starts in about a second and is 3.5 MB, on a 2018 Mac mini.</p>
+    </div>
+    <div class="card roq-feature vid-card">
+      <div class="roq-feature-icon"><i class="fa-solid fa-code-branch"></i></div>
+      <h3>One repository, one version</h3>
+      <p>Every component now lives in one repository and ships under one version. Your Maven coordinates do not change.</p>
+    </div>
+  </div>
+  <div class="vid-arch-cta">
+    <a href="/posts/vidocq-0-4-0-is-here-persistence-websockets-and-a-dev-loop-that-keeps-your-state/" class="btn btn-primary">
+      Read the 0.4.0 announcement <i class="fa-solid fa-arrow-right"></i>
+    </a>
+  </div>
+</section>
+</div>
+
+<!-- ── Six constraints ───────────────────────────────────────── -->
 <section class="roq-section vid-section">
   <h2>Six constraints. One runtime.</h2>
   <p class="roq-section-lead">
     Every design decision in the Vidocq ecosystem flows from the same set of rules,
-    applied consistently across all fifteen projects.
+    applied consistently across every component.
   </p>
   <div class="roq-features vid-features">
     <div class="card card-highlighted roq-feature vid-card">
       <div class="roq-feature-icon"><i class="fa-solid fa-layer-group"></i></div>
-      <h3>JPMS-native</h3>
+      <h3>Java Modules native</h3>
       <p>Every module ships a <code>module-info.java</code>. Minimal exports, no unjustified <code>opens</code>, no classpath fallback, no split packages.</p>
     </div>
     <div class="card roq-feature vid-card">
@@ -71,7 +119,7 @@ theme-color: "#0f172a"
     <div class="card card-highlighted roq-feature vid-card">
       <div class="roq-feature-icon"><i class="fa-solid fa-cubes"></i></div>
       <h3>Independent bricks</h3>
-      <p>Fifteen self-contained projects, each with its own release cycle. Consume only the layers you need.</p>
+      <p>Each brick depends only on the specifications it implements, so it also runs on another container or application server. One repository, one version: consume only the layers you need.</p>
     </div>
     <div class="card roq-feature vid-card">
       <div class="roq-feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
@@ -92,7 +140,7 @@ theme-color: "#0f172a"
       <div class="card card-highlighted roq-feature vid-card">
         <div class="roq-feature-icon"><i class="fa-solid fa-lock"></i></div>
         <h3>Secured JARs (<code>.sjar</code>)</h3>
-        <p>JPMS archives encrypted with <strong>AES-256</strong>. The exposed surface — public API and SPI packages — stays in the clear so consumers compile and link normally; everything else is ciphered at rest, protecting your intellectual property and shrinking the attack surface.</p>
+        <p>Modular jars encrypted with <strong>AES-256</strong>. The exposed surface — public API and SPI packages — stays in the clear so consumers compile and link normally; everything else is ciphered at rest, protecting your intellectual property and shrinking the attack surface.</p>
       </div>
       <div class="card roq-feature vid-card">
         <div class="roq-feature-icon"><i class="fa-solid fa-puzzle-piece"></i></div>
@@ -102,7 +150,7 @@ theme-color: "#0f172a"
       <div class="card card-highlighted roq-feature vid-card">
         <div class="roq-feature-icon"><i class="fa-solid fa-arrows-rotate"></i></div>
         <h3>Hot reload</h3>
-        <p>A first-class <strong>hot-reload</strong> mode reflects code and configuration changes live, keeping the inner development loop tight without restarting the runtime.</p>
+        <p>A first-class <strong>hot-reload</strong> mode reflects code and configuration changes live. A change to method bodies is swapped into the running JVM, and your beans, HTTP sessions and open pages keep their state.</p>
       </div>
     </div>
   </section>
@@ -130,8 +178,9 @@ theme-color: "#0f172a"
       <div class="vid-arch-row vid-arch-persistence">
         <div class="vid-arch-row-label">Persistence</div>
         <div class="vid-arch-row-items">
-          <span class="vid-arch-pill">mansart</span>
-          <span class="vid-arch-desc">Jakarta Data 1.0 · Transactions 2.0 · JDBC pool · H2 / PostgreSQL</span>
+          <span class="vid-arch-pill">mansart <span class="vid-arch-pill-sub">Data 1.0 · Transactions 2.0 · JDBC pool</span></span>
+          <span class="vid-arch-pill">noether <span class="vid-arch-pill-sub">Persistence 3.2 · preview</span></span>
+          <span class="vid-arch-pill">JNDI <span class="vid-arch-pill-sub">java:comp names</span></span>
         </div>
       </div>
       <div class="vid-arch-row vid-arch-microprofile">
@@ -149,8 +198,12 @@ theme-color: "#0f172a"
       <div class="vid-arch-row vid-arch-jakarta">
         <div class="vid-arch-row-label">Jakarta EE</div>
         <div class="vid-arch-row-items">
-          <span class="vid-arch-pill">foy <span class="vid-arch-pill-sub">Servlet 6.1</span></span>
           <span class="vid-arch-pill">cassini <span class="vid-arch-pill-sub">REST 4.0</span></span>
+          <span class="vid-arch-pill">foy <span class="vid-arch-pill-sub">Servlet 6.1 · WebSocket 2.2</span></span>
+          <span class="vid-arch-pill">peano <span class="vid-arch-pill-sub">Expression Language 6.0</span></span>
+          <span class="vid-arch-pill">ibarra <span class="vid-arch-pill-sub">Pages 4.0</span></span>
+          <span class="vid-arch-pill">bodoni <span class="vid-arch-pill-sub">Tag Library 3.0</span></span>
+          <span class="vid-arch-pill">kerckhoffs <span class="vid-arch-pill-sub">Security 4.0 · preview</span></span>
         </div>
       </div>
       <div class="vid-arch-row vid-arch-foundation">
@@ -166,7 +219,7 @@ theme-color: "#0f172a"
 
     <div class="vid-arch-cta">
       <a href="/projects/" class="btn btn-primary">
-        Browse all fifteen projects <i class="fa-solid fa-arrow-right"></i>
+        Browse all projects <i class="fa-solid fa-arrow-right"></i>
       </a>
     </div>
   </section>
