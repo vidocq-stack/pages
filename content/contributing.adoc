@@ -12,7 +12,11 @@ TCK coverage improvements, new specification implementations,
 performance work, and documentation.
 
 The source code is hosted under the https://codefloe.com/Vidocq[Vidocq organisation on Codefloe],
-a https://forgejo.org[Forgejo] instance. Each specification implementation lives in its own repository.
+a https://forgejo.org[Forgejo] instance. Every component (Chappe, Vauban, Cassini, Mansart, the MicroProfile
+implementations, ...) and the runtime live in one repository, the monorepo
+https://codefloe.com/Vidocq/vidocq[`Vidocq/vidocq`]: one Maven build, one version, one CI. A few repositories
+sit around it: the documentation, this site, the governance, the tutorial, and the components
+that have not moved in yet (Erasmus, Tassis, Verne).
 
 == Two ways to take part
 
@@ -36,7 +40,7 @@ invite you to become a *maintainer*.
 
 | Merged by
 | a maintainer
-| themselves, with `/merge`
+| themselves: by hand in the monorepo, with `/merge` in the other repositories
 
 | Guides
 | https://codefloe.com/Vidocq/vidocq-workspace/src/branch/main/docs/getting-started.md[workspace],
@@ -112,10 +116,14 @@ mailto:contribute@vidocq.io[contribute@vidocq.io].
   workspace made (`+git remote add fork git@codefloe.com:<you>/<repo>.git+`).
 . *Create a branch* from the latest `main`, in a worktree next to `main/`.
 . *Write the failing test first*, then the implementation.
-. *Prove it* with a full build: `./mvnw -ntp clean install`. If your change touches a TCK, run it
-  and confirm there is no regression.
+. *Prove it* with a build: `./mvnw -ntp clean verify` builds and tests what your branch changed and
+  every module that depends on it. If your change touches a TCK, run it and confirm there is no
+  regression.
 . *Commit and push* to your fork; your commits are signed and signed off automatically.
-. *Open the pull request* from your fork to `main` of the Vidocq repository.
+. *Open the pull request* from your fork to `main` of the Vidocq repository. In the monorepo, its
+  title carries `[WIP]` while it is not ready, then one tag per component it touches (listed in
+  `components.json`), then the Conventional Commits title:
+  `[MANSART] fix(data): ...`.
 . *Follow the checks and the review.* The checks of a pull request from a fork start once a
   maintainer has approved them. If `main` moves on, rebase your branch and push it again;
   never use the *Update branch* button, which breaks the signatures.
@@ -131,8 +139,8 @@ signing the CLA are open to any Codefloe account. After some time contributing, 
 maintainers may invite you to join them. The decision is theirs: there is no automatic
 threshold. As a maintainer, you join the `devs` team of the Vidocq
 organisation on Codefloe. You then work in branches of the Vidocq repositories instead of a fork,
-merge your own pull requests with the `/merge` command of the merge-bot, and review the pull
-requests of others, including those from forks.
+merge your own pull requests (by hand in the monorepo, with the `/merge` command of the merge-bot
+in the other repositories), and review the pull requests of others, including those from forks.
 
 From then on, you follow the
 https://codefloe.com/Vidocq/governance/src/branch/main/MAINTAINERS.md[maintainer guide] of the
@@ -142,7 +150,8 @@ governance repository.
 
 The rules are written in the
 https://codefloe.com/Vidocq/vidocq-workspace/src/branch/main/AGENTS.md[`AGENTS.md`] file of the
-workspace, which coding agents read too, and summarised in each repository's own `AGENTS.md`.
+workspace, which coding agents read too, and summarised in the `AGENTS.md` of each repository and
+of each component folder of the monorepo.
 
 === Strict Java Modules
 
@@ -174,13 +183,15 @@ Avoid `synchronized` blocks around I/O; prefer `ReentrantLock` to prevent carrie
 Write the failing test before the implementation — red → green → refactor.
 The official Jakarta and MicroProfile TCKs run through Arquillian. Their runners sit behind the
 `tck` Maven profile, so a normal build neither downloads nor runs them: run them with the script
-at the root of the repository, for example `./run-official-tck-servlet6.1.sh` in Foy or
+in the component's folder, for example `./run-official-tck-servlet6.1.sh` in Foy or
 `./run-official-tck-restful-4.0.sh` in Cassini.
 
 === Toolchain
 
-Java 25 and Maven 3.9.16. Each repository ships a Maven wrapper: always build with `./mvnw`, and
-always with `clean install`, because a stale `target/` directory can hide a failure or invent one.
+Java 25 and Maven 3.10.0 in the monorepo. Each repository ships a Maven wrapper: always build with
+`./mvnw`, and always with `clean`, because a stale `target/` directory can hide a failure or invent
+one. On a branch, stop at `verify`: an `install` puts your branch's SNAPSHOT in `~/.m2`, in place of
+the published one, for every other build on your machine.
 
 == Commit messages
 
@@ -211,11 +222,12 @@ You remain the author and the committer.
 
 == Bug reports and performance changes
 
-Any reproducible bug must be tracked in a `BUG.md` file at the root of the relevant repository:
+Any reproducible bug must be tracked in a `BUG.md` file in the folder of the relevant component
+(in the monorepo) or at the root of the relevant repository:
 short id, date, symptom, minimal repro, root-cause hypothesis, and status.
 Include a `BUG.md` entry in your pull request if you are fixing a known bug.
 
-Any performance number must be recorded in a `BENCH.md` file at the root of the repository:
+Any performance number must be recorded in a `BENCH.md` file, in the same place:
 date, hardware and JVM details, exact command, raw results, and delta versus the previous run.
 Never quote performance figures in commit messages or PR descriptions without a `BENCH.md` entry.
 
